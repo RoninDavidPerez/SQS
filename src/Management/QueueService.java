@@ -56,9 +56,30 @@ public class QueueService {
             return;
         }
 
+        recordMatchResult(match);
+
         queue.removeMatch(match);
         for (Player player : match.getPlayers()) {
             onHold.add(player);
+        }
+    }
+
+    private void recordMatchResult(Match match) {
+        int scoreA = match.getTeamAScore();
+        int scoreB = match.getTeamBScore();
+
+        if (scoreA == scoreB) {
+            return;
+        }
+
+        List<Player> winners = scoreA > scoreB ? match.getTeamAPlayers() : match.getTeamBPlayers();
+        List<Player> losers = scoreA > scoreB ? match.getTeamBPlayers() : match.getTeamAPlayers();
+
+        for (Player player : winners) {
+            player.recordWin();
+        }
+        for (Player player : losers) {
+            player.recordLoss();
         }
     }
 

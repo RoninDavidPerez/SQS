@@ -12,6 +12,7 @@ import Collection.OnHoldList;
 import Collection.QueueList;
 import Model.MatchStatus;
 import java.awt.BorderLayout;
+import java.awt.Container;
 
 import javax.swing.BoxLayout;
 import javax.swing.JOptionPane;
@@ -25,6 +26,7 @@ public class MainGUI extends javax.swing.JFrame {
 private QueueService queueService;
 private CourtManager courtManager;
 private static MainGUI instance;
+private CourtWindow courtWindow;
 
 private Match court1Match;
 private Match court2Match;
@@ -32,15 +34,19 @@ private Match court3Match;
 private Match court4Match;
 private javax.swing.Timer courtRefreshTimer;
 private Match selectedQueueMatch;
-private final java.util.Set<Player> selectedOnHoldPlayers = new java.util.HashSet<>();
 private javax.swing.JLabel court1Timer;
 private javax.swing.JLabel court2Timer;
 private javax.swing.JLabel court3Timer;
 private javax.swing.JLabel court4Timer;
+private javax.swing.JLabel court1ScoreLabel;
+private javax.swing.JLabel court2ScoreLabel;
+private javax.swing.JLabel court3ScoreLabel;
+private javax.swing.JLabel court4ScoreLabel;
 private javax.swing.JButton court1ClearButton;
 private javax.swing.JButton court2ClearButton;
 private javax.swing.JButton court3ClearButton;
 private javax.swing.JButton court4ClearButton;
+private int matchDurationMinutes = 15;
 
 public MainGUI() {
     instance = this;
@@ -73,10 +79,15 @@ public MainGUI() {
     court3ClearButton = createClearCourtButton(3);
     court4ClearButton = createClearCourtButton(4);
 
-    configureCourtDisplay(jPanel4, jTextField6, court1Timer, lblCourt1Players, jButton13, jButton14, court1ClearButton);
-    configureCourtDisplay(jPanel14, jTextField8, court2Timer, lblCourt2Players, jButton17, jButton18, court2ClearButton);
-    configureCourtDisplay(jPanel18, jTextField9, court3Timer, lblCourt3Players, jButton19, jButton20, court3ClearButton);
-    configureCourtDisplay(jPanel15, jTextField12, court4Timer, lblCourt4Players, jButton25, jButton26, court4ClearButton);
+    court1ScoreLabel = createScoreLabel();
+    court2ScoreLabel = createScoreLabel();
+    court3ScoreLabel = createScoreLabel();
+    court4ScoreLabel = createScoreLabel();
+
+    configureCourtDisplay(jPanel4, jTextField6, court1Timer, lblCourt1Players, jButton13, jButton14, court1ClearButton, court1ScoreLabel, createScoreButtons(1, court1ScoreLabel));
+    configureCourtDisplay(jPanel14, jTextField8, court2Timer, lblCourt2Players, jButton17, jButton18, court2ClearButton, court2ScoreLabel, createScoreButtons(2, court2ScoreLabel));
+    configureCourtDisplay(jPanel18, jTextField9, court3Timer, lblCourt3Players, jButton19, jButton20, court3ClearButton, court3ScoreLabel, createScoreButtons(3, court3ScoreLabel));
+    configureCourtDisplay(jPanel15, jTextField12, court4Timer, lblCourt4Players, jButton25, jButton26, court4ClearButton, court4ScoreLabel, createScoreButtons(4, court4ScoreLabel));
 
     jButton13.addActionListener(e -> startCourtMatch(1));
     jButton17.addActionListener(e -> startCourtMatch(2));
@@ -111,7 +122,7 @@ public MainGUI() {
             scrollPaneQueue.setHorizontalScrollBarPolicy(javax.swing.JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
     setResizable(true);
-    setMinimumSize(new java.awt.Dimension(900, 600));
+    setMinimumSize(new java.awt.Dimension(900, 380));
     courtRefreshTimer = new javax.swing.Timer(1000, e -> refreshCourtDisplays());
     courtRefreshTimer.start();
 }
@@ -134,12 +145,15 @@ private void configureCourtDisplay(
         javax.swing.JLabel playersLabel,
         javax.swing.JButton startButton,
         javax.swing.JButton endButton,
-        javax.swing.JButton clearButton) {
+        javax.swing.JButton clearButton,
+        javax.swing.JLabel scoreLabel,
+        javax.swing.JPanel scoreButtons) {
     courtPanel.removeAll();
     courtPanel.setLayout(new java.awt.BorderLayout(8, 8));
     courtLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
     courtLabel.setText(courtLabel.getText().replace("00:00", "COURT"));
-    courtLabel.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 28));
+    courtLabel.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 36));
+    courtLabel.setFont(courtLabel.getFont().deriveFont(java.awt.Font.BOLD, 20f));
     timerLabel.setText("00:00");
     playersLabel.setText("No Match");
     playersLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
@@ -153,11 +167,17 @@ private void configureCourtDisplay(
     header.setLayout(new javax.swing.BoxLayout(header, javax.swing.BoxLayout.Y_AXIS));
     header.add(courtLabel);
     header.add(timerLabel);
+    header.add(scoreLabel);
 
-    javax.swing.JPanel actions = new javax.swing.JPanel(new java.awt.GridLayout(1, 3, 6, 0));
-    actions.add(startButton);
-    actions.add(endButton);
-    actions.add(clearButton);
+    javax.swing.JPanel matchButtons = new javax.swing.JPanel(new java.awt.GridLayout(1, 3, 6, 0));
+    matchButtons.add(startButton);
+    matchButtons.add(endButton);
+    matchButtons.add(clearButton);
+
+    javax.swing.JPanel actions = new javax.swing.JPanel();
+    actions.setLayout(new javax.swing.BoxLayout(actions, javax.swing.BoxLayout.Y_AXIS));
+    actions.add(matchButtons);
+    actions.add(scoreButtons);
 
     courtPanel.add(header, java.awt.BorderLayout.NORTH);
     courtPanel.add(playersLabel, java.awt.BorderLayout.CENTER);
@@ -167,8 +187,40 @@ private void configureCourtDisplay(
             javax.swing.BorderFactory.createEmptyBorder(8, 8, 8, 8)));
 }
 
+private javax.swing.JLabel createScoreLabel() {
+    javax.swing.JLabel scoreLabel = new javax.swing.JLabel("0 - 0");
+    scoreLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+    scoreLabel.setAlignmentX(java.awt.Component.CENTER_ALIGNMENT);
+    scoreLabel.setFont(scoreLabel.getFont().deriveFont(java.awt.Font.BOLD, 16f));
+    return scoreLabel;
+}
+
+private javax.swing.JPanel createScoreButtons(int courtNumber, javax.swing.JLabel scoreLabel) {
+    javax.swing.JButton plusA = new javax.swing.JButton("TEAM A +1");
+    javax.swing.JButton plusB = new javax.swing.JButton("TEAM B +1");
+    plusA.addActionListener(e -> addPoint(courtNumber, true, scoreLabel));
+    plusB.addActionListener(e -> addPoint(courtNumber, false, scoreLabel));
+    javax.swing.JPanel scoreButtons = new javax.swing.JPanel(new java.awt.GridLayout(1, 2, 6, 0));
+    scoreButtons.add(plusA);
+    scoreButtons.add(plusB);
+    return scoreButtons;
+}
+
+private void addPoint(int courtNumber, boolean teamA, javax.swing.JLabel scoreLabel) {
+    Match match = getCourtMatch(courtNumber);
+    if (match == null) {
+        return;
+    }
+    if (teamA) {
+        match.addPointTeamA();
+    } else {
+        match.addPointTeamB();
+    }
+    scoreLabel.setText(match.getScore());
+}
+
 private javax.swing.JButton createClearCourtButton(int courtNumber) {
-    javax.swing.JButton clearButton = new javax.swing.JButton("CLEAR COURT");
+    javax.swing.JButton clearButton = new javax.swing.JButton("CLEAR");
     clearButton.setForeground(new java.awt.Color(180, 0, 0));
     clearButton.addActionListener(e -> clearCourtMatch(courtNumber));
     return clearButton;
@@ -178,6 +230,7 @@ private javax.swing.JLabel createTimerLabel() {
     javax.swing.JLabel timerLabel = new javax.swing.JLabel("00:00");
     timerLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
     timerLabel.setAlignmentX(java.awt.Component.CENTER_ALIGNMENT);
+    timerLabel.setFont(timerLabel.getFont().deriveFont(java.awt.Font.BOLD, 28f));
     return timerLabel;
 }
 
@@ -202,27 +255,34 @@ public boolean assignMatchToCourt(Match match) {
 private void displayMatchOnCourt(int courtNumber, Match match) {
     StringBuilder display = new StringBuilder("<html><center>");
     int half = match.getPlayers().size() / 2;
+    display.append("<b>TEAM A</b><br>");
     for (int index = 0; index < match.getPlayers().size(); index++) {
         if (index == half) {
-            display.append("<br><b>VS</b><br><br>");
+            display.append("<br><b>VS</b><br><br><b>TEAM B</b><br>");
         }
         display.append(match.getPlayers().get(index).getName()).append("<br>");
     }
     display.append("</center></html>");
 
     switch (courtNumber) {
-        case 1 -> { court1Match = match; lblCourt1Players.setText(display.toString()); }
-        case 2 -> { court2Match = match; lblCourt2Players.setText(display.toString()); }
-        case 3 -> { court3Match = match; lblCourt3Players.setText(display.toString()); }
-        case 4 -> { court4Match = match; lblCourt4Players.setText(display.toString()); }
+        case 1 -> { court1Match = match; lblCourt1Players.setText(display.toString()); court1ScoreLabel.setText(match.getScore()); }
+        case 2 -> { court2Match = match; lblCourt2Players.setText(display.toString()); court2ScoreLabel.setText(match.getScore()); }
+        case 3 -> { court3Match = match; lblCourt3Players.setText(display.toString()); court3ScoreLabel.setText(match.getScore()); }
+        case 4 -> { court4Match = match; lblCourt4Players.setText(display.toString()); court4ScoreLabel.setText(match.getScore()); }
         default -> throw new IllegalArgumentException("Invalid court number: " + courtNumber);
     }
 }
 
 private void startCourtMatch(int courtNumber) {
     Match match = getCourtMatch(courtNumber);
-    if (match != null && match.getStatus() == MatchStatus.PENDING) {
-        courtManager.startMatch(courtNumber, 15);
+    if (match == null) {
+        return;
+    }
+    if (match.getStatus() == MatchStatus.PENDING) {
+        courtManager.startMatch(courtNumber, matchDurationMinutes);
+        refreshCourtDisplays();
+    } else if (match.getStatus() == MatchStatus.PAUSED) {
+        courtManager.resumeMatch(courtNumber);
         refreshCourtDisplays();
     }
 }
@@ -260,15 +320,16 @@ private Match getCourtMatch(int courtNumber) {
 
 private void clearCourt(int courtNumber) {
     switch (courtNumber) {
-        case 1 -> { court1Match = null; lblCourt1Players.setText("No Match"); court1Timer.setText("00:00"); }
-        case 2 -> { court2Match = null; lblCourt2Players.setText("No Match"); court2Timer.setText("00:00"); }
-        case 3 -> { court3Match = null; lblCourt3Players.setText("No Match"); court3Timer.setText("00:00"); }
-        case 4 -> { court4Match = null; lblCourt4Players.setText("No Match"); court4Timer.setText("00:00"); }
+        case 1 -> { court1Match = null; lblCourt1Players.setText("No Match"); court1Timer.setText("00:00"); court1ScoreLabel.setText("0 - 0"); }
+        case 2 -> { court2Match = null; lblCourt2Players.setText("No Match"); court2Timer.setText("00:00"); court2ScoreLabel.setText("0 - 0"); }
+        case 3 -> { court3Match = null; lblCourt3Players.setText("No Match"); court3Timer.setText("00:00"); court3ScoreLabel.setText("0 - 0"); }
+        case 4 -> { court4Match = null; lblCourt4Players.setText("No Match"); court4Timer.setText("00:00"); court4ScoreLabel.setText("0 - 0"); }
         default -> throw new IllegalArgumentException("Invalid court number: " + courtNumber);
     }
 }
 
 private void refreshCourtDisplays() {
+    boolean anyMatchCompleted = false;
     for (int courtNumber = 1; courtNumber <= 4; courtNumber++) {
         Match match = getCourtMatch(courtNumber);
         if (match == null) {
@@ -277,6 +338,7 @@ private void refreshCourtDisplays() {
         if (match.getStatus() == MatchStatus.FINISHED) {
             queueService.completeMatch(match);
             clearCourt(courtNumber);
+            anyMatchCompleted = true;
         } else {
             String remaining = match.getRemainingTime();
             switch (courtNumber) {
@@ -288,8 +350,10 @@ private void refreshCourtDisplays() {
             }
         }
     }
-    updateOnHoldDisplay();
-    updateQueueDisplay();
+    if (anyMatchCompleted) {
+        updateOnHoldDisplay();
+        updateQueueDisplay();
+    }
 }
 
     @SuppressWarnings("unchecked")
@@ -335,6 +399,7 @@ private void refreshCourtDisplays() {
         lblCourt4Players = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setTitle("Racket Sports Queue");
         getContentPane().setLayout(new java.awt.BorderLayout(8, 8));
 
         ButtonAdd.setText("+");
@@ -368,8 +433,8 @@ private void refreshCourtDisplays() {
         ClearQueueButton.setForeground(new java.awt.Color(180, 0, 0));
         ClearQueueButton.addActionListener(e -> clearQueue());
 
-        AddToQueueButton = new javax.swing.JButton("ADD TO QUEUE");
-        AddToQueueButton.addActionListener(e -> addSelectedPlayersToQueue());
+        AddToQueueButton = new javax.swing.JButton("ADD ALL TO COURT");
+        AddToQueueButton.addActionListener(e -> addAllToCourt());
         RemoveFromQueueButton = new javax.swing.JButton("REMOVE FROM QUEUE");
         RemoveFromQueueButton.setForeground(new java.awt.Color(180, 0, 0));
         RemoveFromQueueButton.addActionListener(e -> removeSelectedQueueMatch());
@@ -396,7 +461,7 @@ private void refreshCourtDisplays() {
         jPanel12.setBorder(javax.swing.BorderFactory.createEtchedBorder());
 
         jButton13.setBackground(new java.awt.Color(0, 204, 0));
-        jButton13.setText("START MATCH");
+        jButton13.setText("START");
         jButton13.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton13ActionPerformed(evt);
@@ -404,7 +469,7 @@ private void refreshCourtDisplays() {
         });
 
         jButton14.setBackground(new java.awt.Color(204, 0, 0));
-        jButton14.setText("END MATCH");
+        jButton14.setText("END");
 
         jTextField6.setEditable(false);
         jTextField6.setBackground(new java.awt.Color(218, 218, 218));
@@ -486,10 +551,10 @@ private void refreshCourtDisplays() {
         jPanel17.setBorder(javax.swing.BorderFactory.createEtchedBorder());
 
         jButton17.setBackground(new java.awt.Color(0, 204, 0));
-        jButton17.setText("START MATCH");
+        jButton17.setText("START");
 
         jButton18.setBackground(new java.awt.Color(204, 0, 0));
-        jButton18.setText("END MATCH");
+        jButton18.setText("END");
 
         jTextField8.setEditable(false);
         jTextField8.setBackground(new java.awt.Color(218, 218, 218));
@@ -575,10 +640,10 @@ private void refreshCourtDisplays() {
         jPanel20.setBorder(javax.swing.BorderFactory.createEtchedBorder());
 
         jButton19.setBackground(new java.awt.Color(0, 204, 0));
-        jButton19.setText("START MATCH");
+        jButton19.setText("START");
 
         jButton20.setBackground(new java.awt.Color(204, 0, 0));
-        jButton20.setText("END MATCH");
+        jButton20.setText("END");
 
         jTextField9.setEditable(false);
         jTextField9.setBackground(new java.awt.Color(218, 218, 218));
@@ -671,10 +736,10 @@ private void refreshCourtDisplays() {
         jPanel30.setBorder(javax.swing.BorderFactory.createEtchedBorder());
 
         jButton25.setBackground(new java.awt.Color(0, 204, 0));
-        jButton25.setText("START MATCH");
+        jButton25.setText("START");
 
         jButton26.setBackground(new java.awt.Color(204, 0, 0));
-        jButton26.setText("END MATCH");
+        jButton26.setText("END");
 
         jTextField12.setEditable(false);
         jTextField12.setBackground(new java.awt.Color(218, 218, 218));
@@ -755,6 +820,8 @@ private void refreshCourtDisplays() {
         playersColumn.add(scrollpanePlayers, BorderLayout.CENTER);
         playersColumn.add(playerActions, BorderLayout.SOUTH);
 
+        JPanel settingsColumn = createSettingsPanel();
+
         JPanel onHoldColumn = new JPanel(new BorderLayout(4, 4));
         onHoldColumn.add(scrollPaneOnHold, BorderLayout.CENTER);
         JPanel onHoldActions = new JPanel(new java.awt.GridLayout(1, 2, 4, 4));
@@ -763,9 +830,13 @@ private void refreshCourtDisplays() {
         onHoldColumn.add(onHoldActions, BorderLayout.SOUTH);
 
         JPanel queueColumn = new JPanel(new BorderLayout(4, 4));
-        JPanel queueHeader = new JPanel(new BorderLayout());
-        queueHeader.add(QueueTotalLabel, BorderLayout.WEST);
-        queueHeader.add(ClearQueueButton, BorderLayout.EAST);
+        JPanel queueHeader = new JPanel();
+        queueHeader.setLayout(new javax.swing.BoxLayout(queueHeader, javax.swing.BoxLayout.Y_AXIS));
+        JPanel queueControls = new JPanel(new BorderLayout());
+        queueControls.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 36));
+        queueControls.add(QueueTotalLabel, BorderLayout.WEST);
+        queueControls.add(ClearQueueButton, BorderLayout.EAST);
+        queueHeader.add(queueControls);
         JPanel queueActions = new JPanel(new java.awt.GridLayout(1, 2, 4, 4));
         queueActions.add(AddToQueueButton);
         queueActions.add(RemoveFromQueueButton);
@@ -773,11 +844,16 @@ private void refreshCourtDisplays() {
         queueColumn.add(scrollPaneQueue, BorderLayout.CENTER);
         queueColumn.add(queueActions, BorderLayout.SOUTH);
 
-        JPanel dashboard = new JPanel(new java.awt.GridLayout(1, 3, 8, 8));
-        dashboard.add(playersColumn);
-        dashboard.add(onHoldColumn);
-        dashboard.add(queueColumn);
-        dashboard.setPreferredSize(new java.awt.Dimension(1100, 320));
+        JPanel workspaceColumns = new JPanel(new java.awt.GridLayout(1, 3, 12, 0));
+        workspaceColumns.add(playersColumn);
+        workspaceColumns.add(onHoldColumn);
+        workspaceColumns.add(queueColumn);
+
+        JPanel dashboard = new JPanel(new BorderLayout(12, 0));
+        dashboard.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 8, 8, 8));
+        dashboard.add(settingsColumn, BorderLayout.WEST);
+        dashboard.add(workspaceColumns, BorderLayout.CENTER);
+        dashboard.setPreferredSize(new java.awt.Dimension(1450, 320));
 
         java.awt.Dimension courtSize = new java.awt.Dimension(270, 320);
         jPanel4.setPreferredSize(courtSize);
@@ -795,22 +871,159 @@ private void refreshCourtDisplays() {
         courtsScroll.setHorizontalScrollBarPolicy(javax.swing.JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         courtsScroll.setVerticalScrollBarPolicy(javax.swing.JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 
-        javax.swing.JSplitPane splitPane = new javax.swing.JSplitPane(
-            javax.swing.JSplitPane.VERTICAL_SPLIT,
-            dashboard,
-            courtsScroll
-        );
-        splitPane.setResizeWeight(0.48);
-        getContentPane().add(splitPane, BorderLayout.CENTER);
+        getContentPane().add(dashboard, BorderLayout.CENTER);
 
-        setSize(1200, 780);
-        setLocationRelativeTo(null);
+        courtWindow = new CourtWindow(courtsScroll);
+        courtWindow.setVisible(true);
+
+        setSize(1500, 460);
+        setLocation(courtWindow.getX(), courtWindow.getY() + courtWindow.getHeight() + 10);
+    }
+
+    private JPanel createSettingsPanel() {
+        JPanel settingsPanel = new JPanel();
+        settingsPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(
+                javax.swing.BorderFactory.createLineBorder(java.awt.Color.BLACK, 2),
+                "Settings",
+                javax.swing.border.TitledBorder.CENTER,
+                javax.swing.border.TitledBorder.ABOVE_TOP));
+        settingsPanel.setLayout(new javax.swing.BoxLayout(settingsPanel, javax.swing.BoxLayout.Y_AXIS));
+        settingsPanel.setPreferredSize(new java.awt.Dimension(250, 320));
+        settingsPanel.setMinimumSize(new java.awt.Dimension(235, 320));
+
+        javax.swing.JLabel timerLabel = new javax.swing.JLabel("Match time (minutes)");
+        javax.swing.JSpinner timerSpinner = new javax.swing.JSpinner(
+                new javax.swing.SpinnerNumberModel(matchDurationMinutes, 1, 180, 1));
+        timerSpinner.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 28));
+        javax.swing.JLabel titleLabel = new javax.swing.JLabel("Game title");
+        javax.swing.JTextField titleField = new javax.swing.JTextField("Racket Sports Queue");
+        titleField.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 28));
+        javax.swing.JLabel descriptionLabel = new javax.swing.JLabel("Game description");
+        javax.swing.JTextArea descriptionArea = new javax.swing.JTextArea("Open play dashboard");
+        descriptionArea.setLineWrap(true);
+        descriptionArea.setWrapStyleWord(true);
+        descriptionArea.setRows(3);
+        descriptionArea.setBorder(javax.swing.BorderFactory.createLineBorder(java.awt.Color.GRAY));
+        descriptionArea.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 64));
+
+        javax.swing.JButton saveButton = new javax.swing.JButton("SAVE SETTINGS");
+        saveButton.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+        saveButton.addActionListener(e -> applySettings(
+                timerSpinner,
+                titleField,
+                descriptionArea));
+
+        settingsPanel.add(timerLabel);
+        settingsPanel.add(timerSpinner);
+        settingsPanel.add(javax.swing.Box.createVerticalStrut(8));
+        settingsPanel.add(titleLabel);
+        settingsPanel.add(titleField);
+        settingsPanel.add(javax.swing.Box.createVerticalStrut(8));
+        settingsPanel.add(descriptionLabel);
+        settingsPanel.add(descriptionArea);
+        settingsPanel.add(javax.swing.Box.createVerticalStrut(8));
+        settingsPanel.add(saveButton);
+        settingsPanel.add(javax.swing.Box.createVerticalStrut(10));
+        settingsPanel.add(createDifficultyLegend());
+        return settingsPanel;
+    }
+
+    private void applySettings(
+            javax.swing.JSpinner timerSpinner,
+            javax.swing.JTextField titleField,
+            javax.swing.JTextArea descriptionArea) {
+        String title = titleField.getText().trim();
+        String description = descriptionArea.getText().trim();
+        if (title.isEmpty() || description.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Game title and description are required.");
+            return;
+        }
+
+        matchDurationMinutes = (Integer) timerSpinner.getValue();
+        courtWindow.setDashboardDetails(title, description);
+        setTitle(title);
+    }
+
+    private JPanel createDifficultyLegend() {
+        JPanel legend = new JPanel();
+        legend.setBorder(javax.swing.BorderFactory.createTitledBorder("Difficulty colors"));
+        legend.setLayout(new javax.swing.BoxLayout(legend, javax.swing.BoxLayout.Y_AXIS));
+        legend.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+        legend.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 150));
+        addDifficultyLegendItem(legend, "Beginner", new java.awt.Color(95, 235, 95));
+        addDifficultyLegendItem(legend, "High Beginner", new java.awt.Color(80, 190, 255));
+        addDifficultyLegendItem(legend, "Intermediate", new java.awt.Color(255, 215, 70));
+        addDifficultyLegendItem(legend, "High Intermediate", new java.awt.Color(255, 170, 70));
+        addDifficultyLegendItem(legend, "Advanced", new java.awt.Color(255, 120, 120));
+        addDifficultyLegendItem(legend, "Expert", new java.awt.Color(190, 130, 255));
+        addDifficultyLegendItem(legend, "Professional", new java.awt.Color(120, 120, 120));
+        return legend;
+    }
+
+    private void addDifficultyLegendItem(JPanel legend, String difficulty, java.awt.Color color) {
+        javax.swing.JLabel item = new javax.swing.JLabel("  " + difficulty);
+        item.setOpaque(true);
+        item.setBackground(color);
+        item.setForeground(java.awt.Color.WHITE);
+        item.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+        item.setPreferredSize(new java.awt.Dimension(210, 20));
+        item.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 20));
+        legend.add(item);
     }
 
     private void ButtonAddActionPerformed(java.awt.event.ActionEvent evt) {
 PlayerRowPanel newRow = new PlayerRowPanel();
-pnlPlayerRows.add(newRow);
-refreshPlayerListLayout();
+addPlayerRow(newRow);
+    }
+
+    private void addPlayerRow(PlayerRowPanel row) {
+        pnlPlayerRows.add(row);
+        DragDropSupport.makeDraggable(
+                row.getDragHandle(),
+                row::getPlayerName,
+                () -> row,
+                onHoldDropZone()
+        );
+        refreshPlayerListLayout();
+    }
+
+    private DragDropSupport.DropZone onHoldDropZone() {
+        return DragDropSupport.dropZone(scrollPaneOnHold, payload -> {
+            if (payload instanceof PlayerRowPanel row) {
+                String name = row.getPlayerName();
+                if (name.isEmpty()) {
+                    return;
+                }
+                queueService.addPlayer(name, row.getSelectedFormat(), row.getSelectedSkill());
+                Container parent = row.getParent();
+                if (parent != null) {
+                    parent.remove(row);
+                    parent.revalidate();
+                    parent.repaint();
+                }
+                updateOnHoldDisplay();
+            }
+        });
+    }
+
+    private DragDropSupport.DropZone queueDropZone() {
+        return DragDropSupport.dropZone(scrollPaneQueue, payload -> {
+            if (payload instanceof Player player && queueService.getOnHoldList().contains(player)) {
+                queueService.movePlayerToQueue(player);
+                updateOnHoldDisplay();
+                updateQueueDisplay();
+            }
+        });
+    }
+
+    private DragDropSupport.DropZone playerListDropZone() {
+        return DragDropSupport.dropZone(scrollpanePlayers, payload -> {
+            if (payload instanceof Player player) {
+                queueService.getOnHoldList().remove(player);
+                addPlayerRow(new PlayerRowPanel(player));
+                updateOnHoldDisplay();
+            }
+        });
     }
 
     private void TransferAllToOnHoldActionPerformed(java.awt.event.ActionEvent evt) {
@@ -855,7 +1068,6 @@ for (Player p : onHoldPlayers) {
 }
 
     queueService.getOnHoldList().clearAll();
-    selectedOnHoldPlayers.clear();
 
     updateOnHoldDisplay();
     updateQueueDisplay();
@@ -863,28 +1075,28 @@ for (Player p : onHoldPlayers) {
 
     private void ClearAllOnHoldActionPerformed(java.awt.event.ActionEvent evt) {
         for (Player player : queueService.getOnHoldList().getAllPlayers()) {
-            pnlPlayerRows.add(new PlayerRowPanel(player));
+            addPlayerRow(new PlayerRowPanel(player));
         }
         queueService.getOnHoldList().clearAll();
-        selectedOnHoldPlayers.clear();
-        refreshPlayerListLayout();
         updateOnHoldDisplay();
     }
 
-    private void addSelectedPlayersToQueue() {
-        if (selectedOnHoldPlayers.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Select at least one player first.", "Notice", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-
-        for (Player player : new java.util.ArrayList<>(selectedOnHoldPlayers)) {
-            if (queueService.getOnHoldList().contains(player)) {
-                queueService.movePlayerToQueue(player);
+    private void addAllToCourt() {
+        List<Match> pending = new java.util.ArrayList<>();
+        for (Match match : queueService.getAllPendingMatches()) {
+            if (match.getStatus() != MatchStatus.RUNNING && match.getCourt() == null) {
+                pending.add(match);
             }
         }
-        selectedOnHoldPlayers.clear();
-        updateOnHoldDisplay();
-        updateQueueDisplay();
+        if (pending.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No matches in queue to assign.", "Notice", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        for (Match match : pending) {
+            if (!assignMatchToCourt(match)) {
+                break;
+            }
+        }
     }
 
     private void clearQueue() {
@@ -900,6 +1112,7 @@ for (Player p : onHoldPlayers) {
         queueService.removeMatch(selectedQueueMatch);
         selectedQueueMatch = null;
         updateQueueDisplay();
+        updateOnHoldDisplay();
     }
 
     private void jTextField8ActionPerformed(java.awt.event.ActionEvent evt) {
@@ -912,6 +1125,9 @@ for (Player p : onHoldPlayers) {
     }
                                             
 public void updateOnHoldDisplay() {
+    if (DragDropSupport.isDragInProgress()) {
+        return;
+    }
     pnlOnHoldRows.removeAll();
     pnlOnHoldRows.setLayout(new java.awt.GridLayout(0, 2, 8, 8));
 
@@ -920,17 +1136,16 @@ public void updateOnHoldDisplay() {
         int currentIndex = count++;
         OnHoldPlayerCard card = new OnHoldPlayerCard(p, currentIndex, () -> {
             queueService.getOnHoldList().remove(p);
-            selectedOnHoldPlayers.remove(p);
-            pnlPlayerRows.add(new PlayerRowPanel(p));
-            refreshPlayerListLayout();
+            addPlayerRow(new PlayerRowPanel(p));
             updateOnHoldDisplay();
-        }, selected -> {
-            if (selected) {
-                selectedOnHoldPlayers.add(p);
-            } else {
-                selectedOnHoldPlayers.remove(p);
-            }
-        }, selectedOnHoldPlayers.contains(p));
+        });
+        DragDropSupport.makeDraggable(
+                card.getDragHandle(),
+                p::getName,
+                () -> p,
+                queueDropZone(),
+                playerListDropZone()
+        );
         pnlOnHoldRows.add(card);
     }
 
@@ -959,6 +1174,10 @@ public static void main(String args[]) {
 
     public void updateQueueDisplay() {
 
+    if (DragDropSupport.isDragInProgress()) {
+        return;
+    }
+
     pnlQueueRows.removeAll();
     int total = 0;
 
@@ -980,7 +1199,8 @@ public static void main(String args[]) {
                         () -> {
                             selectedQueueMatch = m;
                             updateQueueDisplay();
-                        }
+                        },
+                        m == selectedQueueMatch
                 );
 
         pnlQueueRows.add(card);

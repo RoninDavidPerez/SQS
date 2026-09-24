@@ -4,26 +4,28 @@ import Model.Player;
 import javax.swing.*;
 import javax.swing.border.LineBorder;
 import java.awt.*;
-import java.util.function.Consumer;
 
 public class OnHoldPlayerCard extends JPanel {
+
+    private final Player player;
+    private final JLabel numberLabel;
 
         public OnHoldPlayerCard(
             Player player,
             int index,
-            Runnable onRemove,
-            Consumer<Boolean> onSelectionChanged,
-            boolean selected) {
+            Runnable onRemove) {
+        this.player = player;
         setLayout(new BorderLayout(4, 2));
         setBorder(new LineBorder(Color.GRAY, 1));
-        setPreferredSize(new Dimension(170, 76));
-        setMinimumSize(new Dimension(150, 76));
-        setMaximumSize(new Dimension(Short.MAX_VALUE, 76));
+        setPreferredSize(new Dimension(170, 98));
+        setMinimumSize(new Dimension(150, 98));
+        setMaximumSize(new Dimension(Short.MAX_VALUE, 98));
 
-        JLabel numberLabel = new JLabel(String.valueOf(index));
+        numberLabel = new JLabel(String.valueOf(index));
         numberLabel.setHorizontalAlignment(SwingConstants.CENTER);
         numberLabel.setPreferredSize(new Dimension(28, 28));
         numberLabel.setBorder(new javax.swing.border.EtchedBorder());
+        numberLabel.setToolTipText("Drag to Queue or Player List");
 
         JLabel nameLabel = new JLabel(player.getName());
 
@@ -43,42 +45,48 @@ public class OnHoldPlayerCard extends JPanel {
         header.add(nameLabel, BorderLayout.CENTER);
         header.add(removeButton, BorderLayout.EAST);
 
-        JButton statusButton = new JButton("ON HOLD");
-        statusButton.setUI(new javax.swing.plaf.basic.BasicButtonUI());
-        statusButton.setPreferredSize(new Dimension(78, 24));
-        statusButton.setMinimumSize(new Dimension(78, 24));
-        statusButton.setMaximumSize(new Dimension(78, 24));
-        statusButton.setSelected(selected);
-        updateSelectionButton(statusButton);
-        statusButton.addActionListener(e -> {
-            statusButton.setSelected(!statusButton.isSelected());
-            updateSelectionButton(statusButton);
-            onSelectionChanged.accept(statusButton.isSelected());
-        });
-
-        JButton formatButton = new JButton(player.getFormat() == Model.MatchFormat.SINGLE ? "S" : "D");
-        formatButton.setEnabled(false);
-        formatButton.setPreferredSize(new Dimension(34, 24));
-
         JLabel skillIndicator = new JLabel();
         skillIndicator.setOpaque(true);
-        skillIndicator.setPreferredSize(new Dimension(26, 24));
+        skillIndicator.setPreferredSize(new Dimension(18, 18));
         skillIndicator.setBackground(skillColor(player));
         skillIndicator.setToolTipText(player.getSkillName());
 
-        JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
-        controls.add(statusButton);
-        controls.add(formatButton);
-        controls.add(skillIndicator);
+        JLabel formatIndicator = new JLabel(player.getFormat() == Model.MatchFormat.SINGLE ? "SINGLES" : "DOUBLES");
+        formatIndicator.setFont(formatIndicator.getFont().deriveFont(Font.PLAIN, 10f));
+        formatIndicator.setForeground(new Color(90, 90, 90));
+
+        JPanel infoRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        infoRow.add(formatIndicator);
+        infoRow.add(skillIndicator);
+
+        JLabel winsLabel = new JLabel("W " + player.getWins());
+        winsLabel.setFont(winsLabel.getFont().deriveFont(Font.BOLD, 11f));
+        winsLabel.setForeground(new Color(0, 140, 0));
+
+        JLabel lossesLabel = new JLabel("L " + player.getLosses());
+        lossesLabel.setFont(lossesLabel.getFont().deriveFont(Font.BOLD, 11f));
+        lossesLabel.setForeground(new Color(180, 0, 0));
+
+        JPanel tallyRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        tallyRow.add(winsLabel);
+        tallyRow.add(lossesLabel);
+
+        JPanel controls = new JPanel();
+        controls.setLayout(new BoxLayout(controls, BoxLayout.Y_AXIS));
+        controls.add(infoRow);
+        controls.add(tallyRow);
 
         add(numberLabel, BorderLayout.WEST);
         add(header, BorderLayout.NORTH);
         add(controls, BorderLayout.CENTER);
     }
 
-    private void updateSelectionButton(JButton statusButton) {
-        statusButton.setText(statusButton.isSelected() ? "SELECTED" : "ON HOLD");
-        statusButton.setForeground(statusButton.isSelected() ? new Color(0, 120, 0) : new Color(70, 140, 230));
+    public JLabel getDragHandle() {
+        return numberLabel;
+    }
+
+    public Player getPlayer() {
+        return player;
     }
 
     private Color skillColor(Player player) {

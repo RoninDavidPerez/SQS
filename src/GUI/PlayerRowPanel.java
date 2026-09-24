@@ -5,6 +5,12 @@ import java.awt.Container;
 import javax.swing.JButton;
 public class PlayerRowPanel extends javax.swing.JPanel {
 
+    private javax.swing.JLabel dragHandle;
+
+    public javax.swing.JLabel getDragHandle() {
+        return dragHandle;
+    }
+
         public String getPlayerName() {
     return jTextField1.getText().trim();
 }
@@ -54,6 +60,14 @@ public Model.MatchFormat getSelectedFormat() {
         jButton1 = new javax.swing.JButton();
         jButton2 = new javax.swing.JButton();
         jComboBox1 = new javax.swing.JComboBox<>();
+        dragHandle = new javax.swing.JLabel();
+
+        dragHandle.setText("\u2630");
+        dragHandle.setToolTipText("Drag to On Hold");
+        dragHandle.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        dragHandle.setPreferredSize(new java.awt.Dimension(20, 28));
+        dragHandle.setMinimumSize(new java.awt.Dimension(20, 28));
+        dragHandle.setMaximumSize(new java.awt.Dimension(20, 28));
 
         jTextField1.setText("SAMPLE NAME");
 
@@ -97,6 +111,8 @@ public Model.MatchFormat getSelectedFormat() {
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap(4, 4)
+                .addComponent(dragHandle, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jTextField1, javax.swing.GroupLayout.DEFAULT_SIZE, 140, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -111,6 +127,7 @@ public Model.MatchFormat getSelectedFormat() {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap(5, 5)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(dragHandle)
                     .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton1)
                     .addComponent(jButton2)

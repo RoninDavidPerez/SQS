@@ -127,6 +127,13 @@ public class CourtManager {
         }
     }
 
+    public void resumeMatch(int courtNum) {
+        Match match = getCourt(courtNum).getCurrentMatch();
+        if (match != null) {
+            match.resume();
+        }
+    }
+
     public List<Court> getAllCourt() {
         return courts;
     }

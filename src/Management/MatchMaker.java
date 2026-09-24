@@ -11,6 +11,12 @@ public class MatchMaker {
         return Math.abs(a.getSkillRank() - b.getSkillRank()) <= 1;
     }
 
+    public boolean isRecordCompatible(Player a, Player b) {
+        int netA = a.getWins() - a.getLosses();
+        int netB = b.getWins() - b.getLosses();
+        return Math.abs(netA - netB) <= 1;
+    }
+
     public Match findCompatibleMatch(
             Player player,
             List<Match> pendingMatches) {
@@ -49,6 +55,9 @@ public class MatchMaker {
         }
 
         return isSkillCompatible(
+                player,
+                match.getPlayers().get(0)
+        ) && isRecordCompatible(
                 player,
                 match.getPlayers().get(0)
         );

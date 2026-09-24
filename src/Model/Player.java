@@ -6,6 +6,8 @@ public class Player {
     private SkillLevel skill;
     private boolean ready;
     private PlayerStatus status;
+    private int wins;
+    private int losses;
 
     public Player(String name, MatchFormat format, SkillLevel skill) {
         this.name = name;
@@ -42,6 +44,22 @@ public class Player {
 
     public PlayerStatus getStatus() {
         return status;
+    }
+
+    public int getWins() {
+        return wins;
+    }
+
+    public int getLosses() {
+        return losses;
+    }
+
+    public void recordWin() {
+        wins++;
+    }
+
+    public void recordLoss() {
+        losses++;
     }
     
 }

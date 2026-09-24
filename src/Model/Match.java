@@ -16,8 +16,7 @@ public class Match {
     private Court court;
     private final MatchFormat format;
 
-    private LocalDateTime startTime;
-    private int durationMinutes;
+    private LocalDateTime endTime;
 
     private MatchStatus status;
 
@@ -40,18 +39,32 @@ public class Match {
 
     public void start(int durationMinutes) {
 
-        this.durationMinutes = durationMinutes;
-
         this.status = MatchStatus.RUNNING;
-        this.startTime = LocalDateTime.now();
+        this.endTime = LocalDateTime.now().plusMinutes(durationMinutes);
 
         for (Player player : players) {
             player.setStatus(PlayerStatus.IN_MATCH);
         }
 
-        endTask = scheduler.schedule(() -> {
-            end();
-        }, durationMinutes, TimeUnit.MINUTES);
+        scheduleEndTask(Duration.ofMinutes(durationMinutes));
+    }
+
+    public void resume() {
+        if (status != MatchStatus.PAUSED) {
+            return;
+        }
+
+        Duration remaining = pausedRemaining != null ? pausedRemaining : Duration.ZERO;
+
+        this.status = MatchStatus.RUNNING;
+        this.endTime = LocalDateTime.now().plus(remaining);
+
+        scheduleEndTask(remaining);
+    }
+
+    private void scheduleEndTask(Duration delay) {
+        long millis = Math.max(0, delay.toMillis());
+        endTask = scheduler.schedule(this::end, millis, TimeUnit.MILLISECONDS);
     }
 
     public void pause() {
@@ -60,7 +73,7 @@ public class Match {
         }
         pausedRemaining = Duration.between(
                 LocalDateTime.now(),
-                startTime.plusMinutes(durationMinutes));
+                endTime);
         if (pausedRemaining.isNegative()) {
             pausedRemaining = Duration.ZERO;
         }
@@ -132,14 +145,14 @@ public class Match {
             return formatDuration(pausedRemaining);
         }
 
-        if (startTime == null) {
+        if (endTime == null) {
             return "00:00";
         }
 
         Duration remaining =
                 Duration.between(
                         LocalDateTime.now(),
-                        startTime.plusMinutes(durationMinutes)
+                        endTime
                 );
 
         if (remaining.isNegative()) {
@@ -170,6 +183,16 @@ public class Match {
 
     public List<Player> getPlayers() {
         return players;
+    }
+
+    public List<Player> getTeamAPlayers() {
+        int half = players.size() / 2;
+        return new ArrayList<>(players.subList(0, half));
+    }
+
+    public List<Player> getTeamBPlayers() {
+        int half = players.size() / 2;
+        return new ArrayList<>(players.subList(half, players.size()));
     }
 
     public MatchFormat getFormat() {
