@@ -1,4 +1,4 @@
-# SQS (Squash Queue System)
+# SQS (Sports Queue System)
 
 SQS is a Java Swing desktop application for managing player check-in, queue formation, court assignment, and live match tracking for a sports facility.
 
