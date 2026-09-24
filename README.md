@@ -114,7 +114,11 @@ Examples:
 
 ## Contributors
 
-- **Ronin Perez** | Fullstack | Build/ Collection/ Model/ Management/ GUI/
-- **Aldrin Bagagnan** | Frontend | GUI/
-- **Ryiogi Flores** | Backend | Collection/ Model/ Management/
-- **Francos Santarin** | Frontend | GUI/
+- **Perez, Ronin** | Team Head | Build/ Collection/ Model/ Management/ GUI/
+- **Santarin, Francos** | Front end | GUI/
+- **Andres, Jerald** | Back end 
+- **Bagagnan, Aldrin** | Back end | GUI/
+- **Ebonia, Tristan** | Front end 
+- **Flores, Ryiogi Zen** | Back end | Collection/ Model/ Management/
+- **Lagoras, Rus** | Fullstack 
+
