@@ -2,6 +2,7 @@ package GUI;
 
 import Management.QueueService;
 import Management.CourtManager;
+import Management.TournamentManager;
 
 import Model.Match;
 import Model.Player;
@@ -25,6 +26,8 @@ import javax.swing.JPanel;
 public class MainGUI extends javax.swing.JFrame {
 private QueueService queueService;
 private CourtManager courtManager;
+private TournamentManager tournamentManager;
+private TournamentManger currentTournament;
 private static MainGUI instance;
 private CourtWindow courtWindow;
 
@@ -59,6 +62,9 @@ public MainGUI() {
 
     courtManager =
             new Management.CourtManager();
+    
+    tournamentManager = 
+            new tournamentManager();
 
     queueService =
             new Management.QueueService(
@@ -137,7 +143,27 @@ private void refreshPlayerListLayout() {
 public static MainGUI getInstance() {
 return instance;
 }
+    
+public TournamentManager getTournamentManager() {
+    return tournamentManager;
+}
 
+public Tournament getCurrentTournament() {
+    return currentTournament;
+}
+
+public void setCurrentTournament(Tournament tournament) {
+    this.currentTournament = tournament;
+}
+
+public void refreshTournamentData() {
+    if (currentTournament == null) {
+        return;
+    }
+
+    revalidate();
+    repaint();
+}
 private void configureCourtDisplay(
         javax.swing.JPanel courtPanel,
         javax.swing.JTextField courtLabel,
