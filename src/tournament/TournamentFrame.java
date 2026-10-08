@@ -1,287 +1,138 @@
 package tournament;
 
+import Management.TournamentManager;
+import Model.MatchFormat;
+import Model.Sport;
+import Model.Tournament;
+import java.util.EnumMap;
+import java.util.Map;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import javax.swing.BorderFactory;
-import javax.swing.DefaultListModel;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JList;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
-import javax.swing.JSpinner;
-import javax.swing.JSplitPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.SpinnerNumberModel;
+import javax.swing.JTabbedPane;
 
-/** Main tournament window: bracket, controls and progress. */
+/** Tournament window for format-specific brackets and progress. */
 public class TournamentFrame extends JFrame {
 
-    private final Tournament tournament = new Tournament();
-    private final BracketPanel bracket = new BracketPanel(tournament);
-
-    private final JTextField nameField = new JTextField(14);
-    private final JButton addButton = new JButton("Add Player");
-    private final JButton removeButton = new JButton("Remove Selected");
-    private final JCheckBox shuffleBox = new JCheckBox("Shuffle seeding", true);
-    private final JButton startTournamentButton = new JButton("Start Tournament");
-    private final JButton resetButton = new JButton("Reset");
-
-    private final DefaultListModel<Player> playerModel = new DefaultListModel<Player>();
-    private final JList<Player> playerList = new JList<Player>(playerModel);
-
-    private final JLabel selectedLabel = new JLabel("No match selected");
-    private final JButton startMatchButton = new JButton("Start Match");
-    private final JSpinner score1Spinner = new JSpinner(new SpinnerNumberModel(0, 0, 999, 1));
-    private final JSpinner score2Spinner = new JSpinner(new SpinnerNumberModel(0, 0, 999, 1));
-    private final JLabel p1Label = new JLabel("Player 1");
-    private final JLabel p2Label = new JLabel("Player 2");
-    private final JButton recordButton = new JButton("Record Result");
-
-    private final JProgressBar progressBar = new JProgressBar(0, 100);
-    private final JLabel progressLabel = new JLabel(" ");
-    private final JTextArea log = new JTextArea(5, 40);
+    private final TournamentManager tournamentManager;
+    private final JLabel progressLabel = new JLabel();
+    private final JLabel selectedMatchLabel = new JLabel("Select a match in the bracket.");
+    private final Map<MatchFormat, BracketPanel> brackets = new EnumMap<>(MatchFormat.class);
+    private final Map<MatchFormat, JLabel> standingsLabels = new EnumMap<>(MatchFormat.class);
+    private final JTabbedPane bracketTabs = new JTabbedPane();
+    private Tournament tournament;
 
     public TournamentFrame() {
-        super("Tournament Manager");
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setLayout(new BorderLayout(6, 6));
+        this(new TournamentManager(), null);
+    }
 
+    public TournamentFrame(
+            TournamentManager tournamentManager,
+            Tournament initialTournament) {
+        super("Tournament");
+        this.tournamentManager = tournamentManager;
+        tournament = initialTournament != null
+                ? initialTournament
+                : tournamentManager.createTournament(
+                        "Racket Tournament",
+                        Model.BracketType.SINGLE_ELIMINATION,
+                        "Racket single-elimination tournament",
+                        Sport.RACKET);
+        addBracketTab(MatchFormat.SINGLE, "Singles");
+        addBracketTab(MatchFormat.DOUBLE, "Doubles");
+        bracketTabs.addChangeListener(event -> refreshSelection());
 
-        JScrollPane bracketScroll = new JScrollPane(bracket);
-        bracketScroll.setBorder(BorderFactory.createTitledBorder("Bracket"));
-        bracketScroll.getVerticalScrollBar().setUnitIncrement(16);
-        bracketScroll.getHorizontalScrollBar().setUnitIncrement(16);
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        setLayout(new BorderLayout(8, 8));
+        add(buildHeader(), BorderLayout.NORTH);
+        add(bracketTabs, BorderLayout.CENTER);
+        add(buildActions(), BorderLayout.SOUTH);
 
-add(bracketScroll, BorderLayout.CENTER);
-
-        wireEvents();
-        tournament.addChangeListener(new Runnable() {
-            public void run() { refresh(); }
-        });
-        refresh();
-
-        setPreferredSize(new Dimension(1100, 700));
+        setPreferredSize(new Dimension(1100, 680));
         pack();
         setLocationRelativeTo(null);
+        refreshBracket();
     }
 
-    // ---------- layout ----------
-    private JPanel buildTopBar() {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 6));
-        p.setBorder(BorderFactory.createTitledBorder("Tournament controls"));
-        p.add(new JLabel("Player name:"));
-        p.add(nameField);
-        p.add(addButton);
-        p.add(removeButton);
-        p.add(shuffleBox);
-        p.add(startTournamentButton);
-        p.add(resetButton);
-        return p;
+    private JPanel buildHeader() {
+        JPanel header = new JPanel(new BorderLayout(8, 4));
+        header.setBorder(BorderFactory.createEmptyBorder(8, 10, 4, 10));
+        JLabel title = new JLabel(tournament.getName());
+        title.setFont(title.getFont().deriveFont(java.awt.Font.BOLD, 18f));
+        JLabel details = new JLabel(tournament.getDescription()
+                + "   |   Singles and Doubles"
+                + "   |   " + tournament.getBracketType().getDisplayName());
+        JPanel text = new JPanel(new BorderLayout(2, 2));
+        text.add(title, BorderLayout.NORTH);
+        text.add(details, BorderLayout.CENTER);
+        header.add(text, BorderLayout.CENTER);
+        return header;
     }
 
-    private JPanel buildSidePanel() {
-        JPanel side = new JPanel(new BorderLayout(4, 4));
-        side.setBorder(BorderFactory.createTitledBorder("Players"));
-        side.add(new JScrollPane(playerList), BorderLayout.CENTER);
-
-        JPanel match = new JPanel();
-        match.setLayout(new javax.swing.BoxLayout(match, javax.swing.BoxLayout.Y_AXIS));
-        match.setBorder(BorderFactory.createTitledBorder("Selected match"));
-        selectedLabel.setFont(selectedLabel.getFont().deriveFont(Font.BOLD));
-        match.add(selectedLabel);
-        match.add(javax.swing.Box.createVerticalStrut(6));
-        match.add(startMatchButton);
-        match.add(javax.swing.Box.createVerticalStrut(8));
-
-        JPanel s1 = new JPanel(new BorderLayout(6, 0));
-        s1.add(p1Label, BorderLayout.CENTER);
-        s1.add(score1Spinner, BorderLayout.EAST);
-        JPanel s2 = new JPanel(new BorderLayout(6, 0));
-        s2.add(p2Label, BorderLayout.CENTER);
-        s2.add(score2Spinner, BorderLayout.EAST);
-        match.add(s1);
-        match.add(javax.swing.Box.createVerticalStrut(4));
-        match.add(s2);
-        match.add(javax.swing.Box.createVerticalStrut(8));
-        match.add(recordButton);
-        side.add(match, BorderLayout.SOUTH);
-        return side;
+    private void addBracketTab(MatchFormat format, String title) {
+        BracketPanel bracket = new BracketPanel(tournament, format);
+        bracket.setSelectionListener(this::refreshSelection);
+        brackets.put(format, bracket);
+        JScrollPane scroll = new JScrollPane(bracket);
+        scroll.setBorder(BorderFactory.createTitledBorder("Bracket"));
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+        scroll.getHorizontalScrollBar().setUnitIncrement(16);
+        JPanel tab = new JPanel(new BorderLayout(4, 4));
+        tab.add(scroll, BorderLayout.CENTER);
+        JLabel standings = new JLabel();
+        standings.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+        standingsLabels.put(format, standings);
+        tab.add(standings, BorderLayout.SOUTH);
+        bracketTabs.addTab(title, tab);
     }
 
-    private JPanel buildBottomPanel() {
-        JPanel p = new JPanel(new BorderLayout(4, 4));
-        p.setBorder(BorderFactory.createTitledBorder("Tournament progress"));
-        progressBar.setStringPainted(true);
-        JPanel top = new JPanel(new BorderLayout(4, 4));
-        top.add(progressLabel, BorderLayout.NORTH);
-        top.add(progressBar, BorderLayout.CENTER);
-        p.add(top, BorderLayout.NORTH);
-        log.setEditable(false);
-        p.add(new JScrollPane(log), BorderLayout.CENTER);
-        return p;
+    private JPanel buildActions() {
+        JPanel actions = new JPanel(new BorderLayout(4, 4));
+        actions.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createEtchedBorder(),
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)));
+        actions.add(selectedMatchLabel, BorderLayout.NORTH);
+        actions.add(progressLabel, BorderLayout.CENTER);
+        actions.add(new JLabel(
+                "Add players, queue matches, start play, and record scores in the racket dashboard."),
+                BorderLayout.SOUTH);
+        return actions;
     }
 
-    // ---------- events ----------
-    private void wireEvents() {
-        ActionListener add = new ActionListener() {
-            public void actionPerformed(ActionEvent e) { onAddPlayer(); }
-        };
-        addButton.addActionListener(add);
-        nameField.addActionListener(add);
-
-        removeButton.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                Player p = playerList.getSelectedValue();
-                if (p != null) {
-                    tournament.removePlayer(p);
-                    logLine("Removed player: " + p);
-                }
-            }
-        });
-        startTournamentButton.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    tournament.start(shuffleBox.isSelected());
-                    logLine("Tournament started with " + tournament.getPlayers().size() + " players.");
-                } catch (RuntimeException ex) {
-                    error(ex.getMessage());
-                }
-            }
-        });
-        resetButton.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                int ok = JOptionPane.showConfirmDialog(TournamentFrame.this,
-                        "Clear the bracket? Players are kept.", "Reset", JOptionPane.YES_NO_OPTION);
-                if (ok == JOptionPane.YES_OPTION) {
-                    bracket.clearSelection();
-                    tournament.reset();
-                    logLine("Tournament reset.");
-                }
-            }
-        });
-        startMatchButton.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                Match m = bracket.getSelected();
-                if (m == null) {
-                    return;
-                }
-                try {
-                    tournament.startMatch(m);
-                    logLine("Started " + m);
-                } catch (RuntimeException ex) {
-                    error(ex.getMessage());
-                }
-            }
-        });
-        recordButton.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) { onRecordResult(); }
-        });
-        bracket.setSelectionListener(new Runnable() {
-            public void run() { updateMatchControls(); }
-        });
-    }
-
-    private void onAddPlayer() {
-        try {
-            tournament.addPlayer(nameField.getText());
-            logLine("Added player: " + nameField.getText().trim());
-            nameField.setText("");
-            nameField.requestFocusInWindow();
-        } catch (RuntimeException ex) {
-            error(ex.getMessage());
+    private void refreshSelection() {
+        BracketPanel bracket = brackets.get(getSelectedFormat());
+        Model.TournamentMatch selected = bracket == null ? null : bracket.getSelected();
+        if (selected == null) {
+            selectedMatchLabel.setText("Select a match in the bracket.");
+        } else {
+            String state = selected.isCompleted()
+                    ? "Completed"
+                    : selected.getMatch() == null
+                            ? "Bye"
+                            : selected.getMatch().getStatus().toString();
+            selectedMatchLabel.setText("Round " + selected.getRound()
+                    + ", " + selected.getSection().getDisplayName()
+                    + ", match " + selected.getMatchNumber() + ": " + state);
         }
     }
 
-    private void onRecordResult() {
-        Match m = bracket.getSelected();
-        if (m == null) {
-            return;
+    public void refreshBracket() {
+        for (Map.Entry<MatchFormat, BracketPanel> entry : brackets.entrySet()) {
+            entry.getValue().refresh();
+            standingsLabels.get(entry.getKey()).setText(
+                    tournamentManager.getStandingsText(tournament, entry.getKey()));
         }
-        try {
-            int s1 = (Integer) score1Spinner.getValue();
-            int s2 = (Integer) score2Spinner.getValue();
-            tournament.recordResult(m, s1, s2);
-            logLine(m.label() + ": " + m.getPlayer1() + " " + s1 + " - " + s2 + " " + m.getPlayer2()
-                    + "  ->  " + m.getWinner() + " advances");
-            if (tournament.getChampion() != null) {
-                JOptionPane.showMessageDialog(this, "Champion: " + tournament.getChampion().getName(),
-                        "Tournament complete", JOptionPane.INFORMATION_MESSAGE);
-            }
-        } catch (RuntimeException ex) {
-            error(ex.getMessage());
-        }
+        progressLabel.setText(tournamentManager.getProgressText(tournament));
+        refreshSelection();
     }
 
-    // ---------- view updates ----------
-    private void refresh() {
-        playerModel.clear();
-        for (Player p : tournament.getPlayers()) {
-            playerModel.addElement(p);
-        }
-        bracket.refresh();
-
-        boolean started = tournament.isStarted();
-        nameField.setEnabled(!started);
-        addButton.setEnabled(!started);
-        removeButton.setEnabled(!started);
-        shuffleBox.setEnabled(!started);
-        startTournamentButton.setEnabled(!started && tournament.getPlayers().size() >= 2);
-        resetButton.setEnabled(started);
-
-        int total = tournament.totalMatches();
-        int done = tournament.completedMatches();
-        progressBar.setValue(total == 0 ? 0 : done * 100 / total);
-        progressBar.setString(started ? done + " / " + total + " matches" : "Not started");
-        progressLabel.setText(tournament.progressText());
-
-        updateMatchControls();
-    }
-
-    private void updateMatchControls() {
-        Match m = bracket.getSelected();
-        if (m == null || !tournament.isStarted()) {
-            selectedLabel.setText("No match selected");
-            p1Label.setText("Player 1");
-            p2Label.setText("Player 2");
-            startMatchButton.setEnabled(false);
-            recordButton.setEnabled(false);
-            score1Spinner.setEnabled(false);
-            score2Spinner.setEnabled(false);
-            return;
-        }
-        selectedLabel.setText(m.label() + " - " + m.getStatus().toString().replace('_', ' '));
-        p1Label.setText(m.getPlayer1() == null ? "TBD" : m.getPlayer1().getName());
-        p2Label.setText(m.getPlayer2() == null ? (m.isBye() ? "BYE" : "TBD") : m.getPlayer2().getName());
-        boolean live = m.getStatus() == Match.Status.IN_PROGRESS;
-        startMatchButton.setEnabled(m.getStatus() == Match.Status.READY);
-        recordButton.setEnabled(live);
-        score1Spinner.setEnabled(live);
-        score2Spinner.setEnabled(live);
-        if (m.getStatus() == Match.Status.COMPLETED) {
-            score1Spinner.setValue(m.getScore1());
-            score2Spinner.setValue(m.getScore2());
-        } else if (!live) {
-            score1Spinner.setValue(0);
-            score2Spinner.setValue(0);
-        }
-    }
-
-    private void logLine(String s) {
-        log.append(s + "\n");
-        log.setCaretPosition(log.getDocument().getLength());
-    }
-
-    private void error(String msg) {
-        JOptionPane.showMessageDialog(this, msg, "Tournament", JOptionPane.WARNING_MESSAGE);
+    private MatchFormat getSelectedFormat() {
+        return bracketTabs.getSelectedIndex() == 1
+                ? MatchFormat.DOUBLE
+                : MatchFormat.SINGLE;
     }
 }

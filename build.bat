@@ -31,16 +31,16 @@ mkdir "%INPUT%"
 mkdir "%DIST%"
 
 pushd "%ROOT%"
-javac -encoding UTF-8 -d "%CLASSES%" src\GUI\MainGUI.java src\GUI\OnHoldPlayerCard.java src\GUI\PlayerRowPanel.java src\GUI\QueueMatchCard.java src\Collection\OnHoldList.java src\Collection\QueueList.java src\Management\CourtManager.java src\Management\MatchMaker.java src\Management\QueueService.java src\Model\Court.java src\Model\Match.java src\Model\MatchFormat.java src\Model\MatchStatus.java src\Model\Player.java src\Model\PlayerStatus.java src\Model\SkillLevel.java
+javac -encoding UTF-8 -sourcepath src -d "%CLASSES%" src\GUI\MainGUI.java src\tournament\Main.java
 popd
 if errorlevel 1 exit /b 1
 
-jar --create --file "%INPUT%\SQS.jar" --main-class GUI.MainGUI -C "%CLASSES%" .
+jar --create --file "%INPUT%\SQS.jar" --main-class tournament.Main -C "%CLASSES%" .
 if errorlevel 1 exit /b 1
 
 echo JAR created: %INPUT%\SQS.jar
 
-jpackage --type exe --name SQS --app-version 1.0.0 --vendor "SQS" --input "%INPUT%" --main-jar SQS.jar --main-class GUI.MainGUI --win-shortcut --win-menu --win-dir-chooser --dest "%DIST%"
+jpackage --type exe --name SQS --app-version 1.0.0 --vendor "SQS" --input "%INPUT%" --main-jar SQS.jar --main-class tournament.Main --win-shortcut --win-menu --win-dir-chooser --dest "%DIST%"
 if errorlevel 1 exit /b 1
 
 echo.

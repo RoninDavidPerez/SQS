@@ -61,5 +61,10 @@ public class Player {
     public void recordLoss() {
         losses++;
     }
+
+    @Override
+    public String toString() {
+        return name;
+    }
     
 }

@@ -10,6 +10,7 @@ import Model.Player;
 import Model.MatchFormat;
 import Model.SkillLevel;
 import Model.Tournament;
+import tournament.TournamentFrame;
 
 import Collection.OnHoldList;
 import Collection.QueueList;
@@ -20,6 +21,7 @@ import java.awt.Container;
 import javax.swing.BoxLayout;
 import javax.swing.JOptionPane;
 
+import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JPanel;
 
@@ -29,7 +31,9 @@ public class MainGUI extends javax.swing.JFrame {
 private QueueService queueService;
 private CourtManager courtManager;
 private TournamentManager tournamentManager;
-private TournamentManger currentTournament;
+private Tournament currentTournament;
+private TournamentFrame tournamentFrame;
+private final List<Player> knownPlayers = new ArrayList<>();
 private static MainGUI instance;
 private CourtWindow courtWindow;
 
@@ -54,6 +58,9 @@ private javax.swing.JButton court4ClearButton;
 private int matchDurationMinutes = 15;
 
 public MainGUI() {
+    if (instance != null && instance.isDisplayable()) {
+        throw new IllegalStateException("The racket dashboard is already open.");
+    }
     instance = this;
 
     OnHoldList onHoldList = new OnHoldList();
@@ -65,8 +72,8 @@ public MainGUI() {
     courtManager =
             new Management.CourtManager();
     
-    tournamentManager = 
-            new tournamentManager();
+    tournamentManager =
+            new TournamentManager();
 
     queueService =
             new Management.QueueService(
@@ -123,7 +130,7 @@ public MainGUI() {
     );
 
             scrollpanePlayers.setVerticalScrollBarPolicy(javax.swing.JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-            scrollpanePlayers.setHorizontalScrollBarPolicy(javax.swing.JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+            scrollpanePlayers.setHorizontalScrollBarPolicy(javax.swing.JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
             scrollPaneOnHold.setVerticalScrollBarPolicy(javax.swing.JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
             scrollPaneOnHold.setHorizontalScrollBarPolicy(javax.swing.JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
             scrollPaneQueue.setVerticalScrollBarPolicy(javax.swing.JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
@@ -138,12 +145,19 @@ public MainGUI() {
 private void refreshPlayerListLayout() {
     int rowHeight = 50;
     int height = Math.max(30, pnlPlayerRows.getComponentCount() * rowHeight);
-    pnlPlayerRows.setPreferredSize(new java.awt.Dimension(340, height));
+    pnlPlayerRows.setPreferredSize(new java.awt.Dimension(300, height));
     pnlPlayerRows.revalidate();
     pnlPlayerRows.repaint();
 }
 public static MainGUI getInstance() {
 return instance;
+}
+
+public static synchronized MainGUI getOrCreate() {
+    if (instance == null || !instance.isDisplayable()) {
+        instance = new MainGUI();
+    }
+    return instance;
 }
     
 public TournamentManager getTournamentManager() {
@@ -156,16 +170,70 @@ public Tournament getCurrentTournament() {
 
 public void setCurrentTournament(Tournament tournament) {
     this.currentTournament = tournament;
-}
-
-public void refreshTournamentData() {
-    if (currentTournament == null) {
+    if (tournament == null) {
         return;
     }
-
-    revalidate();
-    repaint();
+    for (Player player : knownPlayers) {
+        tournamentManager.addPlayer(tournament, player);
+    }
+    tournamentManager.refreshBracketPreview(tournament);
+    if (tournamentFrame != null) {
+        tournamentFrame.refreshBracket();
+    }
 }
+
+private void rememberPlayer(Player player) {
+    if (!knownPlayers.contains(player)) {
+        knownPlayers.add(player);
+    }
+    if (currentTournament != null) {
+        if (tournamentManager.addPlayer(currentTournament, player)) {
+            tournamentManager.refreshBracketPreview(currentTournament);
+        } else if (currentTournament.getStatus() == Model.TournamentStatus.IN_PROGRESS) {
+            JOptionPane.showMessageDialog(this,
+                    "Tournament registration is closed because a court match has started.",
+                    "Tournament registration", JOptionPane.INFORMATION_MESSAGE);
+        }
+        if (tournamentFrame != null) {
+            tournamentFrame.refreshBracket();
+        }
+    }
+}
+
+public void showTournamentMode() {
+    Tournament tournament = currentTournament;
+    if (tournament == null) {
+        tournament = tournamentManager.createTournament(
+                "Racket Tournament",
+                Model.BracketType.SINGLE_ELIMINATION,
+                "Racket single-elimination tournament",
+                Model.Sport.RACKET);
+    }
+    showTournamentMode(tournament);
+}
+
+public void showTournamentMode(Tournament tournament) {
+    if (tournament == null || tournament.getSport() != Model.Sport.RACKET) {
+        throw new IllegalArgumentException("A racket tournament is required.");
+    }
+    if (tournamentFrame == null || !tournamentFrame.isDisplayable()) {
+        setCurrentTournament(tournament);
+        tournamentFrame = new TournamentFrame(
+                tournamentManager,
+                tournament);
+    }
+    setVisible(true);
+    tournamentFrame.setVisible(true);
+    tournamentFrame.toFront();
+}
+
+public static void launchTournamentMode() {
+    java.awt.EventQueue.invokeLater(() -> {
+        MainGUI mainGUI = MainGUI.getOrCreate();
+        mainGUI.showTournamentMode();
+    });
+}
+
 private void configureCourtDisplay(
         javax.swing.JPanel courtPanel,
         javax.swing.JTextField courtLabel,
@@ -308,9 +376,11 @@ private void startCourtMatch(int courtNumber) {
     }
     if (match.getStatus() == MatchStatus.PENDING) {
         courtManager.startMatch(courtNumber, matchDurationMinutes);
+        refreshTournamentBracket(match);
         refreshCourtDisplays();
     } else if (match.getStatus() == MatchStatus.PAUSED) {
         courtManager.resumeMatch(courtNumber);
+        refreshTournamentBracket(match);
         refreshCourtDisplays();
     }
 }
@@ -321,7 +391,14 @@ private void endCourtMatch(int courtNumber) {
         return;
     }
     courtManager.pauseMatch(courtNumber);
+    refreshTournamentBracket(match);
     refreshCourtDisplays();
+}
+
+private void refreshTournamentBracket(Match match) {
+    if (isTournamentMatch(match) && tournamentFrame != null) {
+        tournamentFrame.refreshBracket();
+    }
 }
 
 private void clearCourtMatch(int courtNumber) {
@@ -329,11 +406,51 @@ private void clearCourtMatch(int courtNumber) {
     if (match == null) {
         return;
     }
+    if (isTournamentMatch(match)
+            && match.getTeamAScore() == match.getTeamBScore()) {
+        JOptionPane.showMessageDialog(this,
+                "A tournament match needs a winning score before it can be cleared.",
+                "Tournament result", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
     courtManager.endMatch(courtNumber);
-    queueService.completeMatch(match);
+    if (!completeCourtMatch(match)) {
+        return;
+    }
     clearCourt(courtNumber);
     updateOnHoldDisplay();
     updateQueueDisplay();
+}
+
+private boolean completeCourtMatch(Match match) {
+    if (isTournamentMatch(match)) {
+        if (!tournamentManager.recordCompletedCourtMatch(currentTournament, match)) {
+            return false;
+        }
+        queueService.completeTournamentMatch(match);
+        if (tournamentFrame != null) {
+            tournamentFrame.refreshBracket();
+        }
+        return true;
+    }
+    queueService.completeMatch(match);
+    return true;
+}
+
+private boolean isTournamentMatch(Match courtMatch) {
+    if (currentTournament == null || courtMatch == null) {
+        return false;
+    }
+    for (MatchFormat format : currentTournament.getActiveFormats()) {
+        for (List<Model.TournamentMatch> round : currentTournament.getRounds(format)) {
+            for (Model.TournamentMatch tournamentMatch : round) {
+                if (tournamentMatch.getMatch() == courtMatch) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
 }
 
 private Match getCourtMatch(int courtNumber) {
@@ -364,7 +481,9 @@ private void refreshCourtDisplays() {
             continue;
         }
         if (match.getStatus() == MatchStatus.FINISHED) {
-            queueService.completeMatch(match);
+            if (!completeCourtMatch(match)) {
+                continue;
+            }
             clearCourt(courtNumber);
             anyMatchCompleted = true;
         } else {
@@ -1022,7 +1141,9 @@ addPlayerRow(newRow);
                 if (name.isEmpty()) {
                     return;
                 }
-                queueService.addPlayer(name, row.getSelectedFormat(), row.getSelectedSkill());
+                Player player = queueService.addPlayer(
+                    name, row.getSelectedFormat(), row.getSelectedSkill());
+                rememberPlayer(player);
                 Container parent = row.getParent();
                 if (parent != null) {
                     parent.remove(row);
@@ -1037,11 +1158,96 @@ addPlayerRow(newRow);
     private DragDropSupport.DropZone queueDropZone() {
         return DragDropSupport.dropZone(scrollPaneQueue, payload -> {
             if (payload instanceof Player player && queueService.getOnHoldList().contains(player)) {
-                queueService.movePlayerToQueue(player);
+                if (currentTournament == null) {
+                    queueService.movePlayerToQueue(player);
+                } else {
+                    queueTournamentPlayer(player, true);
+                }
                 updateOnHoldDisplay();
                 updateQueueDisplay();
             }
         });
+    }
+
+    private boolean queueTournamentPlayer(Player player, boolean showMessage) {
+        if (currentTournament == null) {
+            return false;
+        }
+        try {
+            if (currentTournament.getStatus() == Model.TournamentStatus.SETUP) {
+                tournamentManager.startTournament(currentTournament, false);
+            }
+            Model.TournamentMatch match =
+                    tournamentManager.getNextMatchForPlayer(currentTournament, player);
+            if (match == null) {
+                if (showMessage) {
+                    JOptionPane.showMessageDialog(this,
+                            "This player has no playable match in the current round.",
+                            "Tournament queue", JOptionPane.INFORMATION_MESSAGE);
+                }
+                if (tournamentFrame != null) {
+                    tournamentFrame.refreshBracket();
+                }
+                return false;
+            }
+            boolean queued = queueService.queueTournamentMatch(match.getMatch());
+            if (!queued && showMessage) {
+                JOptionPane.showMessageDialog(this,
+                        "All players in this bracket match must be on hold before it can be queued.",
+                        "Tournament queue", JOptionPane.WARNING_MESSAGE);
+            }
+            if (tournamentFrame != null) {
+                tournamentFrame.refreshBracket();
+            }
+            return queued;
+        } catch (RuntimeException ex) {
+            if (showMessage) {
+                JOptionPane.showMessageDialog(this, ex.getMessage(),
+                        "Tournament queue", JOptionPane.WARNING_MESSAGE);
+            }
+            return false;
+        }
+    }
+
+    private void queueTournamentRound() {
+        try {
+            if (currentTournament.getStatus() == Model.TournamentStatus.SETUP) {
+                tournamentManager.startTournament(currentTournament, false);
+            }
+            if (currentTournament.getActiveFormats().isEmpty()) {
+                throw new IllegalStateException("There are no playable tournament matches yet.");
+            }
+            int queuedCount = 0;
+            int unavailableCount = 0;
+            for (MatchFormat format : currentTournament.getActiveFormats()) {
+                for (Model.TournamentMatch match
+                        : tournamentManager.getCurrentRound(currentTournament, format)) {
+                    if (match.getMatch() == null || match.isCompleted()) {
+                        continue;
+                    }
+                    if (queueService.queueTournamentMatch(match.getMatch())) {
+                        queuedCount++;
+                    } else {
+                        unavailableCount++;
+                    }
+                }
+            }
+            if (queuedCount == 0) {
+                throw new IllegalStateException(
+                        "No current-round match could be queued. Its entrants may already be in a queue or on court.");
+            }
+            if (unavailableCount > 0) {
+                JOptionPane.showMessageDialog(this,
+                        unavailableCount + " match(es) were skipped because not all entrants are on hold.",
+                        "Tournament queue", JOptionPane.INFORMATION_MESSAGE);
+            }
+            if (tournamentFrame != null) {
+                tournamentFrame.refreshBracket();
+            }
+        } catch (RuntimeException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(),
+                    "Tournament queue", JOptionPane.WARNING_MESSAGE);
+        }
     }
 
     private DragDropSupport.DropZone playerListDropZone() {
@@ -1072,7 +1278,8 @@ if (pnlPlayerRows.getComponentCount() == 0) {
                 continue;
             }
 
-            queueService.addPlayer(name, format, skill);
+            Player player = queueService.addPlayer(name, format, skill);
+            rememberPlayer(player);
         }
     }
 updateOnHoldDisplay();
@@ -1092,10 +1299,14 @@ updateOnHoldDisplay();
     }
 
 for (Player p : onHoldPlayers) {
-    queueService.movePlayerToQueue(p);
+    if (currentTournament == null) {
+        queueService.movePlayerToQueue(p);
+    }
 }
 
-    queueService.getOnHoldList().clearAll();
+    if (currentTournament != null) {
+        queueTournamentRound();
+    }
 
     updateOnHoldDisplay();
     updateQueueDisplay();
@@ -1182,22 +1393,7 @@ public void updateOnHoldDisplay() {
 }
      
 public static void main(String args[]) {
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (Exception ex) {
-            java.util.logging.Logger.getLogger(MainGUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new MainGUI().setVisible(true);
-            }
-        });
+    tournament.Main.main(args);
     }
 
     public void updateQueueDisplay() {

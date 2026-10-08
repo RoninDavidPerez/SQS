@@ -1,7 +1,9 @@
 package Model;
 
 public enum BracketType {
-    SINGLE_ELIMINATION("Single Elimination");
+    SINGLE_ELIMINATION("Single Elimination"),
+    DOUBLE_ELIMINATION("Double Elimination"),
+    ROUND_ROBIN("Round Robin");
 
     private final String displayName;
 

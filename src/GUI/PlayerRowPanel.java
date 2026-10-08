@@ -65,9 +65,9 @@ public Model.MatchFormat getSelectedFormat() {
         dragHandle.setText("\u2630");
         dragHandle.setToolTipText("Drag to On Hold");
         dragHandle.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        dragHandle.setPreferredSize(new java.awt.Dimension(20, 28));
-        dragHandle.setMinimumSize(new java.awt.Dimension(20, 28));
-        dragHandle.setMaximumSize(new java.awt.Dimension(20, 28));
+        dragHandle.setPreferredSize(new java.awt.Dimension(18, 28));
+        dragHandle.setMinimumSize(new java.awt.Dimension(18, 28));
+        dragHandle.setMaximumSize(new java.awt.Dimension(18, 28));
 
         jTextField1.setText("SAMPLE NAME");
 
@@ -75,9 +75,12 @@ public Model.MatchFormat getSelectedFormat() {
         jButton1.setText("X");
         jButton1.setUI(new javax.swing.plaf.basic.BasicButtonUI());
         jButton1.setFont(jButton1.getFont().deriveFont(java.awt.Font.BOLD, 14f));
-        jButton1.setPreferredSize(new java.awt.Dimension(36, 28));
-        jButton1.setMinimumSize(new java.awt.Dimension(36, 28));
-        jButton1.setMaximumSize(new java.awt.Dimension(36, 28));
+        jButton1.setPreferredSize(new java.awt.Dimension(26, 28));
+        jButton1.setMinimumSize(new java.awt.Dimension(26, 28));
+        jButton1.setMaximumSize(new java.awt.Dimension(26, 28));
+        jButton1.setMargin(new java.awt.Insets(0, 0, 0, 0));
+        jButton1.setBorder(javax.swing.BorderFactory.createEmptyBorder());
+        jButton1.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         jButton1.setToolTipText("Remove player");
         jButton1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -85,12 +88,15 @@ public Model.MatchFormat getSelectedFormat() {
             }
         });
 
-        jButton2.setText("D");
+        jButton2.setText("S");
         jButton2.setUI(new javax.swing.plaf.basic.BasicButtonUI());
         jButton2.setFont(jButton2.getFont().deriveFont(java.awt.Font.BOLD, 14f));
-        jButton2.setPreferredSize(new java.awt.Dimension(36, 28));
-        jButton2.setMinimumSize(new java.awt.Dimension(36, 28));
-        jButton2.setMaximumSize(new java.awt.Dimension(36, 28));
+        jButton2.setPreferredSize(new java.awt.Dimension(26, 28));
+        jButton2.setMinimumSize(new java.awt.Dimension(26, 28));
+        jButton2.setMaximumSize(new java.awt.Dimension(26, 28));
+        jButton2.setMargin(new java.awt.Insets(0, 0, 0, 0));
+        jButton2.setBorder(javax.swing.BorderFactory.createEmptyBorder());
+        jButton2.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         jButton2.setToolTipText("Switch between doubles and singles");
         jButton2.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -99,6 +105,8 @@ public Model.MatchFormat getSelectedFormat() {
         });
 
         jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Beginner", "High Beginner", "Intermediate", "High Intermediate", "Advanced", "Expert", "Professional" }));
+        jComboBox1.setMinimumSize(new java.awt.Dimension(96, 28));
+        jComboBox1.setPreferredSize(new java.awt.Dimension(100, 28));
         jComboBox1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jComboBox1ActionPerformed(evt);
@@ -110,17 +118,17 @@ public Model.MatchFormat getSelectedFormat() {
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addContainerGap(4, 4)
-                .addComponent(dragHandle, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jTextField1, javax.swing.GroupLayout.DEFAULT_SIZE, 140, Short.MAX_VALUE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(4, 4))
+                .addContainerGap(2, 2)
+                .addComponent(dragHandle, javax.swing.GroupLayout.PREFERRED_SIZE, 18, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 2, 2)
+                .addComponent(jTextField1, 50, 110, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 2, 2)
+                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 2, 2)
+                .addComponent(jComboBox1, 96, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 2, 2)
+                .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(2, 2))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)

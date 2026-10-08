@@ -27,7 +27,7 @@ public class QueueService {
         this.matchMaker = matchMaker;
     }
 
-    public void addPlayer(
+    public Player addPlayer(
             String name,
             MatchFormat format,
             SkillLevel skill) {
@@ -41,6 +41,7 @@ public class QueueService {
         player.setStatus(PlayerStatus.OH_HOLD);
 
         onHold.add(player);
+        return player;
     }
 
     public OnHoldList getOnHoldList() {
@@ -52,11 +53,38 @@ public class QueueService {
     }
 
     public void completeMatch(Match match) {
+        completeMatch(match, true);
+    }
+
+    public void completeTournamentMatch(Match match) {
+        completeMatch(match, false);
+    }
+
+    public boolean queueTournamentMatch(Match match) {
+        if (match == null || queue.getAllMatches().contains(match)) {
+            return false;
+        }
+        for (Player player : match.getPlayers()) {
+            if (!onHold.contains(player)) {
+                return false;
+            }
+        }
+        for (Player player : match.getPlayers()) {
+            onHold.remove(player);
+            player.setStatus(PlayerStatus.IN_QUEUE);
+        }
+        queue.addReady(match);
+        return true;
+    }
+
+    private void completeMatch(Match match, boolean recordStats) {
         if (match == null) {
             return;
         }
 
-        recordMatchResult(match);
+        if (recordStats) {
+            recordMatchResult(match);
+        }
 
         queue.removeMatch(match);
         for (Player player : match.getPlayers()) {

@@ -110,6 +110,14 @@ public class Match {
         teamBScore++;
     }
 
+    public void setScore(int teamAScore, int teamBScore) {
+        if (teamAScore < 0 || teamBScore < 0) {
+            throw new IllegalArgumentException("Scores cannot be negative.");
+        }
+        this.teamAScore = teamAScore;
+        this.teamBScore = teamBScore;
+    }
+
     public int getTeamAScore() {
         return teamAScore;
     }
