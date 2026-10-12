@@ -43,13 +43,16 @@ SQS is a Java Swing desktop application for managing player check-in, queue form
   - `PAUSED`
   - `FINISHED`
 - Stores match details including court assignment, format, player list, and score state.
+- Court score controls can add or remove a point for either team; points cannot drop below zero.
+- Each court has a manual Next Set control that records the current set and resets the points to 0 - 0.
 
 ### Dashboard customization
 
 - Provides a Settings panel on the left side of the racket dashboard.
 - Allows the administrator to change the match timer duration from 1 to 180 minutes.
 - Allows the dashboard title and description to be changed.
-- Displays the title and description centered above the court matches window.
+- Displays the title and description centered above the combined queue and court dashboard.
+- Provides a draggable divider between the queue dashboard and courts so the court area can be enlarged for readability.
 - Shows a difficulty color indicator for every supported skill level.
 - Uses matching difficulty colors in the Settings panel, On Hold cards, and Queue cards.
 - Shows only the unique difficulty colors used by a queued match beside its match number.
@@ -78,7 +81,9 @@ SQS is a Java Swing desktop application for managing player check-in, queue form
 - Add Singles and Doubles players from the dashboard player rows. In Doubles, checked-in players are paired into teams in registration order.
 - Displays separate brackets for Singles and Doubles, with the selected bracket format shown in its own tab.
 - The tournament window displays bracket matches, selected-match status, progress, and Round Robin standings; player registration and match queuing remain in the dashboard.
-- Starting matches and recording scores use the racket dashboard's court controls; completed results advance the bracket.
+- Double-elimination brackets visually separate the winners and losers brackets, and double-elimination and round-robin matches are connected across rounds.
+- Selecting a bracket match displays its completed set scores and the current set score.
+- Starting matches and recording scores use the racket dashboard's court controls; each next set must be started manually, and completed results advance the bracket.
 - Prevents a second racket dashboard from being opened while an existing dashboard is active.
 
 ### Application flow
@@ -89,7 +94,7 @@ SQS is a Java Swing desktop application for managing player check-in, queue form
 4. Racket plus Tournament opens the tournament setup popup.
 5. The player enters the bracket name, bracket type, and description.
 6. Valid setup information creates the tournament.
-7. The racket dashboard and tournament window open together.
+7. The combined racket queue and court dashboard and tournament window open together.
 8. Players are added, matches are generated, winners advance, and the final winner is displayed.
 
 ## Project Structure
@@ -122,7 +127,6 @@ SQS is a Java Swing desktop application for managing player check-in, queue form
 - `src/Model/Tournament.java` - Tournament details, players, rounds, and winner
 - `src/Model/TournamentMatch.java` - Tournament match and advancement state
 - `src/Model/TournamentStatus.java` - Tournament lifecycle states
-- `src/GUI/CourtWindow.java` - Separate court matches window and centered dashboard header
 - `build.bat` - Compiles the project and packages the Windows app
 
 ## Requirements

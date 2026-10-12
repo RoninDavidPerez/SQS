@@ -3,6 +3,7 @@ package Model;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -22,6 +23,7 @@ public class Match {
 
     private int teamAScore;
     private int teamBScore;
+    private final List<SetScore> setScores = new ArrayList<>();
     private Duration pausedRemaining;
     private ScheduledFuture<?> endTask;
 
@@ -110,6 +112,47 @@ public class Match {
         teamBScore++;
     }
 
+    public void removePointTeamA() {
+        if (teamAScore > 0) {
+            teamAScore--;
+        }
+    }
+
+    public void removePointTeamB() {
+        if (teamBScore > 0) {
+            teamBScore--;
+        }
+    }
+
+    public void startNextSet() {
+        setScores.add(new SetScore(teamAScore, teamBScore));
+        teamAScore = 0;
+        teamBScore = 0;
+    }
+
+    public List<SetScore> getSetScores() {
+        return Collections.unmodifiableList(setScores);
+    }
+
+    public String getSetRecordText() {
+        StringBuilder record = new StringBuilder();
+        for (int index = 0; index < setScores.size(); index++) {
+            if (record.length() > 0) {
+                record.append("; ");
+            }
+            SetScore setScore = setScores.get(index);
+            record.append("Set ").append(index + 1).append(": ")
+                    .append(setScore.getTeamAScore()).append(" - ")
+                    .append(setScore.getTeamBScore());
+        }
+        if (record.length() > 0) {
+            record.append("; ");
+        }
+        record.append("Current set ").append(setScores.size() + 1).append(": ")
+                .append(getScore());
+        return record.toString();
+    }
+
     public void setScore(int teamAScore, int teamBScore) {
         if (teamAScore < 0 || teamBScore < 0) {
             throw new IllegalArgumentException("Scores cannot be negative.");
@@ -128,6 +171,10 @@ public class Match {
 
     public String getScore() {
         return teamAScore + " - " + teamBScore;
+    }
+
+    public int getCurrentSetNumber() {
+        return setScores.size() + 1;
     }
 
     public String getWinner() {
@@ -217,5 +264,23 @@ public class Match {
 
     public void addPlayer(Player player) {
         players.add(player);
+    }
+
+    public static final class SetScore {
+        private final int teamAScore;
+        private final int teamBScore;
+
+        private SetScore(int teamAScore, int teamBScore) {
+            this.teamAScore = teamAScore;
+            this.teamBScore = teamBScore;
+        }
+
+        public int getTeamAScore() {
+            return teamAScore;
+        }
+
+        public int getTeamBScore() {
+            return teamBScore;
+        }
     }
 }

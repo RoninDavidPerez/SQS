@@ -101,6 +101,8 @@ public class BracketPanel extends JPanel {
         }
         bounds = new Rectangle[rounds.size()][];
         boolean treeLayout = tournament.getBracketType() == Model.BracketType.SINGLE_ELIMINATION;
+        int winnersSlots = getDoubleEliminationSlots(rounds, TournamentMatch.Section.WINNERS);
+        int losersSlots = getDoubleEliminationSlots(rounds, TournamentMatch.Section.LOSERS);
         for (int r = 0; r < rounds.size(); r++) {
             int count = rounds.get(r).size();
             bounds[r] = new Rectangle[count];
@@ -114,10 +116,63 @@ public class BracketPanel extends JPanel {
                     int top = bounds[r - 1][Math.min(2 * i, previousLast)].y;
                     int bottom = bounds[r - 1][Math.min(2 * i + 1, previousLast)].y;
                     y = (top + bottom) / 2;
+                } else if (tournament.getBracketType() == Model.BracketType.DOUBLE_ELIMINATION) {
+                    TournamentMatch.Section section = rounds.get(r).get(i).getSection();
+                    int indexInSection = 0;
+                    for (int previous = 0; previous < i; previous++) {
+                        if (sameBracketBand(rounds.get(r).get(previous).getSection(), section)) {
+                            indexInSection++;
+                        }
+                    }
+                    int row = doubleEliminationRow(section, indexInSection, winnersSlots, losersSlots);
+                    y = MARGIN + HEADER + row * (BOX_H + V_GAP);
                 }
                 bounds[r][i] = new Rectangle(x, y, BOX_W, BOX_H);
             }
         }
+    }
+
+    private int getDoubleEliminationSlots(
+            List<List<TournamentMatch>> rounds,
+            TournamentMatch.Section section) {
+        int slots = 0;
+        for (List<TournamentMatch> round : rounds) {
+            int count = 0;
+            for (TournamentMatch match : round) {
+                if (sameBracketBand(match.getSection(), section)) {
+                    count++;
+                }
+            }
+            slots = Math.max(slots, count);
+        }
+        return slots;
+    }
+
+    private boolean sameBracketBand(
+            TournamentMatch.Section left,
+            TournamentMatch.Section right) {
+        return bracketBand(left) == bracketBand(right);
+    }
+
+    private int bracketBand(TournamentMatch.Section section) {
+        return switch (section) {
+            case WINNERS -> 0;
+            case LOSERS -> 1;
+            case GRAND_FINAL, RESET_FINAL -> 2;
+            case ROUND_ROBIN -> 3;
+        };
+    }
+
+    private int doubleEliminationRow(
+            TournamentMatch.Section section,
+            int indexInSection,
+            int winnersSlots,
+            int losersSlots) {
+        return switch (bracketBand(section)) {
+            case 0 -> indexInSection;
+            case 1 -> winnersSlots + 1 + indexInSection;
+            default -> winnersSlots + losersSlots + 2 + indexInSection;
+        };
     }
 
     @Override
@@ -133,7 +188,12 @@ public class BracketPanel extends JPanel {
             firstCount = Math.max(firstCount, round.size());
         }
         int w = MARGIN * 2 + rounds.size() * BOX_W + (rounds.size() - 1) * H_GAP;
-        int h = MARGIN * 2 + HEADER + firstCount * BOX_H + (firstCount - 1) * V_GAP
+        int rowCount = tournament.getBracketType() == Model.BracketType.DOUBLE_ELIMINATION
+                ? getDoubleEliminationSlots(rounds, TournamentMatch.Section.WINNERS)
+                        + getDoubleEliminationSlots(rounds, TournamentMatch.Section.LOSERS)
+                        + getDoubleEliminationSlots(rounds, TournamentMatch.Section.GRAND_FINAL) + 2
+                : firstCount;
+        int h = MARGIN * 2 + HEADER + rowCount * BOX_H + (rowCount - 1) * V_GAP
             + (hasUnpairedDoublesPlayer() ? 44 : 0);
         return new Dimension(w, h);
     }
@@ -164,19 +224,25 @@ public class BracketPanel extends JPanel {
         // connectors first so boxes paint over them
         g.setColor(new Color(150, 150, 150));
         g.setStroke(new BasicStroke(1.5f));
-        for (int r = 0; tournament.getBracketType() == Model.BracketType.SINGLE_ELIMINATION
-                && r < rounds.size() - 1; r++) {
-            for (int i = 0; i < bounds[r].length; i++) {
-                Rectangle a = bounds[r][i];
-                Rectangle b = bounds[r + 1][Math.min(i / 2, bounds[r + 1].length - 1)];
-                int x1 = a.x + a.width;
-                int y1 = a.y + a.height / 2;
-                int x2 = b.x;
-                int y2 = b.y + b.height / 2;
-                int mid = x1 + H_GAP / 2;
-                g.drawLine(x1, y1, mid, y1);
-                g.drawLine(mid, y1, mid, y2);
-                g.drawLine(mid, y2, x2, y2);
+        if (tournament.getBracketType() == Model.BracketType.SINGLE_ELIMINATION) {
+            for (int r = 0; r < rounds.size() - 1; r++) {
+                for (int i = 0; i < bounds[r].length; i++) {
+                    Rectangle a = bounds[r][i];
+                    Rectangle b = bounds[r + 1][Math.min(i / 2, bounds[r + 1].length - 1)];
+                    drawConnector(g, a, b);
+                }
+            }
+        } else {
+            g.setColor(new Color(125, 145, 165));
+            g.setStroke(new BasicStroke(1.3f));
+            for (int r = 0; r < rounds.size() - 1; r++) {
+                for (int i = 0; i < rounds.get(r).size(); i++) {
+                    for (int j = 0; j < rounds.get(r + 1).size(); j++) {
+                        if (sharesEntrant(rounds.get(r).get(i), rounds.get(r + 1).get(j))) {
+                            drawConnector(g, bounds[r][i], bounds[r + 1][j]);
+                        }
+                    }
+                }
             }
         }
 
@@ -187,7 +253,7 @@ public class BracketPanel extends JPanel {
             for (int i = 0; i < bounds[r].length; i++) {
                 if (tournament.getBracketType() == Model.BracketType.DOUBLE_ELIMINATION) {
                     g.setFont(base.deriveFont(Font.BOLD, 10f));
-                    g.setColor(new Color(90, 90, 90));
+                    g.setColor(sectionColor(rounds.get(r).get(i).getSection()));
                     g.drawString(rounds.get(r).get(i).getSection().getDisplayName(),
                             bounds[r][i].x, bounds[r][i].y - 4);
                 }
@@ -205,6 +271,35 @@ public class BracketPanel extends JPanel {
         g.dispose();
     }
 
+    private void drawConnector(Graphics2D g, Rectangle from, Rectangle to) {
+        int x1 = from.x + from.width;
+        int y1 = from.y + from.height / 2;
+        int x2 = to.x;
+        int y2 = to.y + to.height / 2;
+        int mid = x1 + H_GAP / 2;
+        g.drawLine(x1, y1, mid, y1);
+        g.drawLine(mid, y1, mid, y2);
+        g.drawLine(mid, y2, x2, y2);
+    }
+
+    private boolean sharesEntrant(TournamentMatch left, TournamentMatch right) {
+        return left.getEntrantA() != null
+                && (left.getEntrantA() == right.getEntrantA()
+                        || left.getEntrantA() == right.getEntrantB())
+                || left.getEntrantB() != null
+                        && (left.getEntrantB() == right.getEntrantA()
+                                || left.getEntrantB() == right.getEntrantB());
+    }
+
+    private Color sectionColor(TournamentMatch.Section section) {
+        return switch (section) {
+            case WINNERS -> new Color(35, 105, 180);
+            case LOSERS -> new Color(190, 95, 35);
+            case GRAND_FINAL, RESET_FINAL -> new Color(115, 65, 155);
+            case ROUND_ROBIN -> new Color(90, 90, 90);
+        };
+    }
+
     private void drawMatch(Graphics2D g, TournamentMatch tournamentMatch, Rectangle b, Font base, Font bold) {
         Match match = tournamentMatch.getMatch();
         Color fill;
@@ -212,6 +307,9 @@ public class BracketPanel extends JPanel {
             fill = new Color(220, 245, 220);
         } else if (match != null && match.getStatus() == MatchStatus.RUNNING) {
             fill = new Color(205, 230, 255);
+        } else if (tournament.getBracketType() == Model.BracketType.DOUBLE_ELIMINATION
+                && tournamentMatch.getSection() == TournamentMatch.Section.LOSERS) {
+            fill = new Color(255, 238, 220);
         } else {
             fill = new Color(255, 248, 210);
         }

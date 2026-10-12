@@ -21,6 +21,7 @@ public class TournamentFrame extends JFrame {
     private final TournamentManager tournamentManager;
     private final JLabel progressLabel = new JLabel();
     private final JLabel selectedMatchLabel = new JLabel("Select a match in the bracket.");
+    private final JLabel setRecordLabel = new JLabel(" ");
     private final Map<MatchFormat, BracketPanel> brackets = new EnumMap<>(MatchFormat.class);
     private final Map<MatchFormat, JLabel> standingsLabels = new EnumMap<>(MatchFormat.class);
     private final JTabbedPane bracketTabs = new JTabbedPane();
@@ -95,7 +96,10 @@ public class TournamentFrame extends JFrame {
         actions.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createEtchedBorder(),
                 BorderFactory.createEmptyBorder(4, 8, 4, 8)));
-        actions.add(selectedMatchLabel, BorderLayout.NORTH);
+        JPanel selection = new JPanel(new BorderLayout(4, 2));
+        selection.add(selectedMatchLabel, BorderLayout.NORTH);
+        selection.add(setRecordLabel, BorderLayout.CENTER);
+        actions.add(selection, BorderLayout.NORTH);
         actions.add(progressLabel, BorderLayout.CENTER);
         actions.add(new JLabel(
                 "Add players, queue matches, start play, and record scores in the racket dashboard."),
@@ -108,6 +112,7 @@ public class TournamentFrame extends JFrame {
         Model.TournamentMatch selected = bracket == null ? null : bracket.getSelected();
         if (selected == null) {
             selectedMatchLabel.setText("Select a match in the bracket.");
+            setRecordLabel.setText(" ");
         } else {
             String state = selected.isCompleted()
                     ? "Completed"
@@ -117,6 +122,11 @@ public class TournamentFrame extends JFrame {
             selectedMatchLabel.setText("Round " + selected.getRound()
                     + ", " + selected.getSection().getDisplayName()
                     + ", match " + selected.getMatchNumber() + ": " + state);
+            setRecordLabel.setText(selected.getMatch() == null
+                    ? "No set scores recorded."
+                    : "<html>Set record: "
+                            + selected.getMatch().getSetRecordText().replace("; ", "<br>")
+                            + "</html>");
         }
     }
 

@@ -35,7 +35,8 @@ private Tournament currentTournament;
 private TournamentFrame tournamentFrame;
 private final List<Player> knownPlayers = new ArrayList<>();
 private static MainGUI instance;
-private CourtWindow courtWindow;
+private final javax.swing.JLabel dashboardTitleLabel = new javax.swing.JLabel("Racket Sports Queue");
+private final javax.swing.JLabel dashboardDescriptionLabel = new javax.swing.JLabel("Open play dashboard");
 
 private Match court1Match;
 private Match court2Match;
@@ -99,10 +100,10 @@ public MainGUI() {
     court3ScoreLabel = createScoreLabel();
     court4ScoreLabel = createScoreLabel();
 
-    configureCourtDisplay(jPanel4, jTextField6, court1Timer, lblCourt1Players, jButton13, jButton14, court1ClearButton, court1ScoreLabel, createScoreButtons(1, court1ScoreLabel));
-    configureCourtDisplay(jPanel14, jTextField8, court2Timer, lblCourt2Players, jButton17, jButton18, court2ClearButton, court2ScoreLabel, createScoreButtons(2, court2ScoreLabel));
-    configureCourtDisplay(jPanel18, jTextField9, court3Timer, lblCourt3Players, jButton19, jButton20, court3ClearButton, court3ScoreLabel, createScoreButtons(3, court3ScoreLabel));
-    configureCourtDisplay(jPanel15, jTextField12, court4Timer, lblCourt4Players, jButton25, jButton26, court4ClearButton, court4ScoreLabel, createScoreButtons(4, court4ScoreLabel));
+    configureCourtDisplay(jPanel4, jTextField6, court1Timer, lblCourt1Players, jButton13, jButton14, court1ClearButton, court1ScoreLabel, createScoreButtons(1, court1ScoreLabel), 1);
+    configureCourtDisplay(jPanel14, jTextField8, court2Timer, lblCourt2Players, jButton17, jButton18, court2ClearButton, court2ScoreLabel, createScoreButtons(2, court2ScoreLabel), 2);
+    configureCourtDisplay(jPanel18, jTextField9, court3Timer, lblCourt3Players, jButton19, jButton20, court3ClearButton, court3ScoreLabel, createScoreButtons(3, court3ScoreLabel), 3);
+    configureCourtDisplay(jPanel15, jTextField12, court4Timer, lblCourt4Players, jButton25, jButton26, court4ClearButton, court4ScoreLabel, createScoreButtons(4, court4ScoreLabel), 4);
 
     jButton13.addActionListener(e -> startCourtMatch(1));
     jButton17.addActionListener(e -> startCourtMatch(2));
@@ -243,7 +244,8 @@ private void configureCourtDisplay(
         javax.swing.JButton endButton,
         javax.swing.JButton clearButton,
         javax.swing.JLabel scoreLabel,
-        javax.swing.JPanel scoreButtons) {
+        javax.swing.JPanel scoreButtons,
+        int courtNumber) {
     courtPanel.removeAll();
     courtPanel.setLayout(new java.awt.BorderLayout(8, 8));
     courtLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
@@ -274,6 +276,9 @@ private void configureCourtDisplay(
     actions.setLayout(new javax.swing.BoxLayout(actions, javax.swing.BoxLayout.Y_AXIS));
     actions.add(matchButtons);
     actions.add(scoreButtons);
+    javax.swing.JButton nextSet = new javax.swing.JButton("NEXT SET");
+    nextSet.addActionListener(e -> startNextSet(courtNumber, scoreLabel));
+    actions.add(nextSet);
 
     courtPanel.add(header, java.awt.BorderLayout.NORTH);
     courtPanel.add(playersLabel, java.awt.BorderLayout.CENTER);
@@ -294,11 +299,17 @@ private javax.swing.JLabel createScoreLabel() {
 private javax.swing.JPanel createScoreButtons(int courtNumber, javax.swing.JLabel scoreLabel) {
     javax.swing.JButton plusA = new javax.swing.JButton("TEAM A +1");
     javax.swing.JButton plusB = new javax.swing.JButton("TEAM B +1");
+    javax.swing.JButton minusA = new javax.swing.JButton("TEAM A -1");
+    javax.swing.JButton minusB = new javax.swing.JButton("TEAM B -1");
     plusA.addActionListener(e -> addPoint(courtNumber, true, scoreLabel));
     plusB.addActionListener(e -> addPoint(courtNumber, false, scoreLabel));
-    javax.swing.JPanel scoreButtons = new javax.swing.JPanel(new java.awt.GridLayout(1, 2, 6, 0));
+    minusA.addActionListener(e -> removePoint(courtNumber, true, scoreLabel));
+    minusB.addActionListener(e -> removePoint(courtNumber, false, scoreLabel));
+    javax.swing.JPanel scoreButtons = new javax.swing.JPanel(new java.awt.GridLayout(2, 2, 6, 2));
     scoreButtons.add(plusA);
     scoreButtons.add(plusB);
+    scoreButtons.add(minusA);
+    scoreButtons.add(minusB);
     return scoreButtons;
 }
 
@@ -312,7 +323,36 @@ private void addPoint(int courtNumber, boolean teamA, javax.swing.JLabel scoreLa
     } else {
         match.addPointTeamB();
     }
-    scoreLabel.setText(match.getScore());
+    scoreLabel.setText(getCourtScoreText(match));
+    refreshTournamentBracket(match);
+}
+
+private void removePoint(int courtNumber, boolean teamA, javax.swing.JLabel scoreLabel) {
+    Match match = getCourtMatch(courtNumber);
+    if (match == null) {
+        return;
+    }
+    if (teamA) {
+        match.removePointTeamA();
+    } else {
+        match.removePointTeamB();
+    }
+    scoreLabel.setText(getCourtScoreText(match));
+    refreshTournamentBracket(match);
+}
+
+private void startNextSet(int courtNumber, javax.swing.JLabel scoreLabel) {
+    Match match = getCourtMatch(courtNumber);
+    if (match == null) {
+        return;
+    }
+    match.startNextSet();
+    scoreLabel.setText(getCourtScoreText(match));
+    refreshTournamentBracket(match);
+}
+
+private String getCourtScoreText(Match match) {
+    return "Set " + match.getCurrentSetNumber() + ": " + match.getScore();
 }
 
 private javax.swing.JButton createClearCourtButton(int courtNumber) {
@@ -361,10 +401,10 @@ private void displayMatchOnCourt(int courtNumber, Match match) {
     display.append("</center></html>");
 
     switch (courtNumber) {
-        case 1 -> { court1Match = match; lblCourt1Players.setText(display.toString()); court1ScoreLabel.setText(match.getScore()); }
-        case 2 -> { court2Match = match; lblCourt2Players.setText(display.toString()); court2ScoreLabel.setText(match.getScore()); }
-        case 3 -> { court3Match = match; lblCourt3Players.setText(display.toString()); court3ScoreLabel.setText(match.getScore()); }
-        case 4 -> { court4Match = match; lblCourt4Players.setText(display.toString()); court4ScoreLabel.setText(match.getScore()); }
+        case 1 -> { court1Match = match; lblCourt1Players.setText(display.toString()); court1ScoreLabel.setText(getCourtScoreText(match)); }
+        case 2 -> { court2Match = match; lblCourt2Players.setText(display.toString()); court2ScoreLabel.setText(getCourtScoreText(match)); }
+        case 3 -> { court3Match = match; lblCourt3Players.setText(display.toString()); court3ScoreLabel.setText(getCourtScoreText(match)); }
+        case 4 -> { court4Match = match; lblCourt4Players.setText(display.toString()); court4ScoreLabel.setText(getCourtScoreText(match)); }
         default -> throw new IllegalArgumentException("Invalid court number: " + courtNumber);
     }
 }
@@ -465,10 +505,10 @@ private Match getCourtMatch(int courtNumber) {
 
 private void clearCourt(int courtNumber) {
     switch (courtNumber) {
-        case 1 -> { court1Match = null; lblCourt1Players.setText("No Match"); court1Timer.setText("00:00"); court1ScoreLabel.setText("0 - 0"); }
-        case 2 -> { court2Match = null; lblCourt2Players.setText("No Match"); court2Timer.setText("00:00"); court2ScoreLabel.setText("0 - 0"); }
-        case 3 -> { court3Match = null; lblCourt3Players.setText("No Match"); court3Timer.setText("00:00"); court3ScoreLabel.setText("0 - 0"); }
-        case 4 -> { court4Match = null; lblCourt4Players.setText("No Match"); court4Timer.setText("00:00"); court4ScoreLabel.setText("0 - 0"); }
+        case 1 -> { court1Match = null; lblCourt1Players.setText("No Match"); court1Timer.setText("00:00"); court1ScoreLabel.setText("Set 1: 0 - 0"); }
+        case 2 -> { court2Match = null; lblCourt2Players.setText("No Match"); court2Timer.setText("00:00"); court2ScoreLabel.setText("Set 1: 0 - 0"); }
+        case 3 -> { court3Match = null; lblCourt3Players.setText("No Match"); court3Timer.setText("00:00"); court3ScoreLabel.setText("Set 1: 0 - 0"); }
+        case 4 -> { court4Match = null; lblCourt4Players.setText("No Match"); court4Timer.setText("00:00"); court4ScoreLabel.setText("Set 1: 0 - 0"); }
         default -> throw new IllegalArgumentException("Invalid court number: " + courtNumber);
     }
 }
@@ -1018,13 +1058,27 @@ private void refreshCourtDisplays() {
         courtsScroll.setHorizontalScrollBarPolicy(javax.swing.JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         courtsScroll.setVerticalScrollBarPolicy(javax.swing.JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 
-        getContentPane().add(dashboard, BorderLayout.CENTER);
+        dashboardTitleLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        dashboardTitleLabel.setFont(dashboardTitleLabel.getFont().deriveFont(java.awt.Font.BOLD, 24f));
+        dashboardDescriptionLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        JPanel header = new JPanel();
+        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+        header.setBorder(javax.swing.BorderFactory.createEmptyBorder(8, 8, 4, 8));
+        header.add(dashboardTitleLabel);
+        header.add(dashboardDescriptionLabel);
 
-        courtWindow = new CourtWindow(courtsScroll);
-        courtWindow.setVisible(true);
+        javax.swing.JSplitPane dashboardSplit = new javax.swing.JSplitPane(
+                javax.swing.JSplitPane.VERTICAL_SPLIT, dashboard, courtsScroll);
+        dashboardSplit.setResizeWeight(0.5);
+        dashboardSplit.setOneTouchExpandable(true);
+        dashboardSplit.setContinuousLayout(true);
 
-        setSize(1500, 460);
-        setLocation(courtWindow.getX(), courtWindow.getY() + courtWindow.getHeight() + 10);
+        getContentPane().add(header, BorderLayout.NORTH);
+        getContentPane().add(dashboardSplit, BorderLayout.CENTER);
+
+        setSize(1500, 820);
+        setLocationRelativeTo(null);
+        dashboardSplit.setDividerLocation(0.5);
     }
 
     private JPanel createSettingsPanel() {
@@ -1087,7 +1141,8 @@ private void refreshCourtDisplays() {
         }
 
         matchDurationMinutes = (Integer) timerSpinner.getValue();
-        courtWindow.setDashboardDetails(title, description);
+        dashboardTitleLabel.setText(title);
+        dashboardDescriptionLabel.setText(description);
         setTitle(title);
     }
 
